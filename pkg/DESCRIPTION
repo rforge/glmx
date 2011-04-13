@@ -1,0 +1,14 @@
+Package: glmx
+Version: 0.0-1
+Date: 2011-04-13
+Title: Generalized Linear Models Extended
+Author@R: c(person(given = "Achim", family = "Zeileis", role = c("aut", "cre"), email = "Achim.Zeileis@R-project.org"),
+            person(given = "Roger", family = "Koenker", role = "aut"))
+Author: Achim Zeileis [aut, cre], Roger Koenker [aut]
+Maintainer: Achim Zeileis <Achim.Zeileis@R-project.org>
+Description: Extended techniques for generalized linear models (GLMs), especially for binary responses,
+             including parametric links and heteroskedastic latent variables.
+Depends: R (>= 2.10.0), stats, Formula
+Imports: graphics, lmtest, sandwich
+Suggests: car, lmtest, sandwich
+License: GPL-2
