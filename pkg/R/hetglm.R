@@ -127,6 +127,7 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   class(linkobj) <- "link-glm"
   scale_linkstr <- link.scale
   scale_linkobj <- make.link(scale_linkstr)
+  scale_linkfun <- scale_linkobj$linkfun
   scale_linkinv <- scale_linkobj$linkinv
 
   ## control parameters
@@ -150,9 +151,8 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   loglikfun <- function(par) {
     beta <- par[1:k]
     gamma <- par[-(1:k)]
-    eta <- as.vector(x %*% beta + offset)
-    pred_scale <- as.vector(scale_linkinv(z %*% gamma))
-    if(isTRUE(all.equal(pred_scale, rep.int(0, n)))) pred_scale <- 1
+    eta <- drop(x %*% beta + offset)
+    pred_scale <- scale_linkinv(scale_linkfun(1) + drop(z %*% gamma))
     prob <- linkinv(eta / pred_scale)
     ll <- if(NCOL(y) > 1L) {
       dbinom(y[, 1L], size = rowSums(y), prob = prob, log = TRUE)
@@ -164,9 +164,8 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   gradfun <- function(par) {
     beta <- par[1:k]
     gamma <- par[-(1:k)]
-    eta <- as.vector(x %*% beta + offset)
-    pred_scale <- as.vector(scale_linkinv(z %*% gamma))
-    if(isTRUE(all.equal(pred_scale, rep.int(0, n)))) pred_scale <- 1
+    eta <- drop(x %*% beta + offset)
+    pred_scale <- scale_linkinv(scale_linkfun(1) + drop(z %*% gamma))
     prob <- linkinv(eta / pred_scale)
     ## FIXME
     rval <- matrix(0, nrow = n, ncol = k + m)
@@ -182,9 +181,8 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   vc <- solve(-as.matrix(opt$hessian))
   beta <- as.vector(opt$par[1:k])
   gamma <- as.vector(opt$par[-(1:k)])
-  eta <- as.vector(x %*% beta + offset)
-  pred_scale <- as.vector(scale_linkinv(z %*% gamma))
-  if(isTRUE(all.equal(pred_scale, rep.int(0, n)))) pred_scale <- 1
+  eta <- drop(x %*% beta + offset)
+  pred_scale <- scale_linkinv(scale_linkfun(1) + drop(z %*% gamma))
   prob <- linkinv(eta / pred_scale)
   nobs <- sum(weights > 0L)
 
@@ -338,8 +336,7 @@ predict.hetglm <- function(object, newdata = NULL,
       "scale" = {
         gamma <- object$coefficients$scale
         z <- if(is.null(object$x)) model.matrix(object, model = "scale") else object$x$scale
-	zg <- object$link$scale$linkinv(drop(z %*% gamma))
-        if(isTRUE(all.equal(zg, rep.int(0, length(zg))))) rep.int(1, length(zg)) else zg
+	object$link$scale$linkinv(object$link$scale$linkfun(1) + drop(z %*% gamma))
       }
     )
     names(rval) <- names(object$fitted.values)
@@ -358,8 +355,7 @@ predict.hetglm <- function(object, newdata = NULL,
     if(is.null(offset)) offset <- rep(0, NROW(X))
 
     eta_mean <- drop(X %*% object$coefficients$mean + offset)
-    pred_scale <- object$link$scale$linkinv(drop(Z %*% object$coefficients$scale))
-    if(isTRUE(all.equal(pred_scale, rep.int(0, NROW(Z))))) pred_scale <- rep.int(1, NROW(Z))
+    pred_scale <- object$link$scale$linkinv(object$link$scale$linkfun(1) + drop(Z %*% object$coefficients$scale))
 
     rval <- switch(type,    
       "response" = {
