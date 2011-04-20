@@ -142,6 +142,34 @@ cbind(heteroskedastic = coef(m),
 ## summary of correct heteroskedastic model
 summary(m)
 
+
+
+## Generate artificial binary data with a single binary regressor
+## driving the heteroskedasticity in a model with two regressors
+set.seed(48)
+n <- 200
+x <- rnorm(n)
+z <- rnorm(n)
+a <- factor(sample(1:2, n, replace = TRUE))
+ystar <- 1 + c(0, 1)[a] + x + z + rnorm(n, sd = c(1, 2)[a])
+y  <- factor(ystar > 0) 
+
+## fit "true" heteroskedastic model
+m1 <- hetglm(y ~ a + x + z | a)
+
+## fit interaction model
+m2 <- hetglm(y ~ a/(x + z) | 1)
+
+## although not obvious at first sight, the two models are
+## nested. m1 is a restricted version of m2 where the following
+## holds: a1:x/a2:x == a1:z/a2:z
+lrtest(m1, m2)
+
+## both ratios are == 2 in the data generating process
+c(x = coef(m2)[3]/coef(m2)[4], z = coef(m2)[5]/coef(m2)[6])
+
+
+
 if(require("AER")) {
 
 ## Labor force participation example from Greene
@@ -178,6 +206,7 @@ table(true = PSID1976$participation,
   predicted = fitted(lfp0b) <= 0.5)
 table(true = PSID1976$participation,
   predicted = fitted(lfp1) <= 0.5)
+
 
 
 ## Adapted (and somewhat artificial) example to illustrate that
