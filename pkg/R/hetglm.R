@@ -108,7 +108,7 @@ hetglm.control <- function(method = "BFGS", maxit = 5000, hessian = TRUE, trace 
 }
 
 hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
-  family = binomial(), link.scale = "log", control = hetglm.control())
+  family = binomial(), link.scale = "log", control)
 {
   ## response and regressor matrix
   nobs <- n <- NROW(x)
@@ -126,16 +126,24 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   names(linkobj)[5] <- "name"
   class(linkobj) <- "link-glm"
   scale_linkstr <- link.scale
+  variance <- family$variance
+  mu.eta <- family$mu.eta
   scale_linkobj <- make.link(scale_linkstr)
   scale_linkfun <- scale_linkobj$linkfun
   scale_linkinv <- scale_linkobj$linkinv
+  scale_mu.eta <- scale_linkobj$mu.eta
 
   ## control parameters
-  method <- control$method
-  start <- control$start
-  hessian <- control$hessian
-  ocontrol <- control
-  control$method <- control$hessian <- control$start <- NULL
+  ctrl <- hetglm.control()
+  if (!missing(control)) {
+      control <- as.list(control)
+      ctrl[names(control)] <- control
+      }
+  method <- ctrl$method
+  start <- ctrl$start
+  hessian <- ctrl$hessian
+  # Ugly, but see: http://finzi.psych.upenn.edu/Rhelp10/2010-April/234262.html
+  ctrl <- ctrl[-which(names(ctrl) %in% c("method","start","hessian"))]
 
   ## null model and starting values
   nullreg <- glm.fit(x = x, y = y, weights = weights, offset = offset, family = family)
@@ -152,8 +160,9 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     beta <- par[1:k]
     gamma <- par[-(1:k)]
     eta <- drop(x %*% beta + offset)
-    pred_scale <- scale_linkinv(scale_linkfun(1) + drop(z %*% gamma))
-    prob <- linkinv(eta / pred_scale)
+    scale.eta <- scale_linkfun(1) + drop(z %*% gamma)
+    scale <- scale_linkinv(scale.eta)
+    prob <- linkinv(eta / scale)
     ll <- if(NCOL(y) > 1L) {
       dbinom(y[, 1L], size = rowSums(y), prob = prob, log = TRUE)
     } else {
@@ -174,7 +183,7 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
 
   ## optimize likelihood  
   opt <- optim(par = start, fn = loglikfun, ## gr = gradfun,
-    method = method, hessian = hessian, control = control)
+    method = method, hessian = hessian, control = ctrl)
   if(opt$convergence > 0) warning("optimization failed to converge")
 
   ## extract fitted values/parameters
