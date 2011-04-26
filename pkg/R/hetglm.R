@@ -171,7 +171,7 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     scale_eta <- scale_linkfun(1) + drop(z %*% gamma)
     scale <- scale_linkinv(scale_eta)
     mu <- linkinv(eta / scale)
-    resid <- (y - mu) / (mu * (1 - mu))
+    resid <- (y - mu) / variance(mu)
     gbeta <- resid * mu.eta(eta / scale) / scale
     ggamma <- - resid * mu.eta(eta / scale) * eta / scale^2 * scale_mu.eta(scale_eta)
     colSums(cbind(weights * gbeta * x, weights * ggamma * z))
@@ -439,7 +439,7 @@ estfun.hetglm <- function(x, ...)
   scale_eta <- x$link$scale$linkfun(1) + drop(zmat %*% gamma)
   scale <- x$link$scale$linkinv(scale_eta)
   mu <- x$link$mean$linkinv(eta / scale)
-  resid <- (y - mu) / (mu * (1 - mu))
+  resid <- (y - mu) / x$family$variance(mu)
   gbeta <- resid * x$link$mean$mu.eta(eta / scale) / scale
   ggamma <- - resid * x$link$mean$mu.eta(eta / scale) * eta / scale^2 * x$link$scale$mu.eta(scale_eta)
 
