@@ -163,7 +163,7 @@ m2 <- hetglm(y ~ a/(x + z) | 1)
 ## although not obvious at first sight, the two models are
 ## nested. m1 is a restricted version of m2 where the following
 ## holds: a1:x/a2:x == a1:z/a2:z
-lrtest(m1, m2)
+if(require("lmtest")) lrtest(m1, m2)
 
 ## both ratios are == 2 in the data generating process
 c(x = coef(m2)[3]/coef(m2)[4], z = coef(m2)[5]/coef(m2)[6])

@@ -108,7 +108,7 @@ hetglm.control <- function(method = "BFGS", maxit = 5000, hessian = TRUE, trace 
 }
 
 hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
-  family = binomial(), link.scale = "log", control)
+  family = binomial(), link.scale = "log", control = hetglm.control())
 {
   ## response and regressor matrix
   nobs <- n <- NROW(x)
@@ -134,16 +134,10 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   scale_mu.eta <- scale_linkobj$mu.eta
 
   ## control parameters
-  ctrl <- hetglm.control()
-  if (!missing(control)) {
-      control <- as.list(control)
-      ctrl[names(control)] <- control
-      }
-  method <- ctrl$method
-  start <- ctrl$start
-  hessian <- ctrl$hessian
-  # Ugly, but see: http://finzi.psych.upenn.edu/Rhelp10/2010-April/234262.html
-  ctrl <- ctrl[-which(names(ctrl) %in% c("method","start","hessian"))]
+  method <- control$method
+  start <- control$start
+  hessian <- control$hessian
+  control <- control[-which(names(control) %in% c("method", "start", "hessian"))]
 
   ## null model and starting values
   nullreg <- glm.fit(x = x, y = y, weights = weights, offset = offset, family = family)
@@ -160,8 +154,8 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     beta <- par[1:k]
     gamma <- par[-(1:k)]
     eta <- drop(x %*% beta + offset)
-    scale.eta <- scale_linkfun(1) + drop(z %*% gamma)
-    scale <- scale_linkinv(scale.eta)
+    scale_eta <- scale_linkfun(1) + drop(z %*% gamma)
+    scale <- scale_linkinv(scale_eta)
     prob <- linkinv(eta / scale)
     ll <- if(NCOL(y) > 1L) {
       dbinom(y[, 1L], size = rowSums(y), prob = prob, log = TRUE)
@@ -170,22 +164,22 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     }
     sum(weights * ll)
   }
-  gradfun <- function(par) {
+  gradfun <- function(par) { ## hard-coded for binary response
     beta <- par[1:k]
     gamma <- par[-(1:k)]
     eta <- drop(x %*% beta + offset)
-    scale.eta <- scale_linkfun(1) + drop(z %*% gamma)
-    scale <- scale_linkinv(scale.eta)
+    scale_eta <- scale_linkfun(1) + drop(z %*% gamma)
+    scale <- scale_linkinv(scale_eta)
     mu <- linkinv(eta / scale)
-    varmu <- variance(mu)
-    gbeta <- mu.eta(eta) * ((eta - offset) + (y - mu))/varmu
-    ggamma <- - gbeta * scale_mu.eta(scale.eta) * eta / scale^2
-    colSums(cbind(gbeta * x, ggamma * z))
+    resid <- (y - mu) / (mu * (1 - mu))
+    gbeta <- resid * mu.eta(eta / scale) / scale
+    ggamma <- - resid * mu.eta(eta / scale) * eta / scale^2 * scale_mu.eta(scale_eta)
+    colSums(cbind(weights * gbeta * x, weights * ggamma * z))
   }
 
   ## optimize likelihood  
   opt <- optim(par = start, fn = loglikfun, gr = gradfun,
-    method = method, hessian = hessian, control = ctrl)
+    method = method, hessian = hessian, control = control)
   if(opt$convergence > 0) warning("optimization failed to converge")
 
   ## extract fitted values/parameters
@@ -193,8 +187,9 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   beta <- as.vector(opt$par[1:k])
   gamma <- as.vector(opt$par[-(1:k)])
   eta <- drop(x %*% beta + offset)
-  pred_scale <- scale_linkinv(scale_linkfun(1) + drop(z %*% gamma))
-  prob <- linkinv(eta / pred_scale)
+  scale_eta <- scale_linkfun(1) + drop(z %*% gamma)
+  scale <- scale_linkinv(scale_eta)
+  prob <- linkinv(eta / scale)
   nobs <- sum(weights > 0L)
 
   ## names
@@ -434,12 +429,21 @@ estfun.hetglm <- function(x, ...)
   y <- if(is.null(x$y)) model.response(model.frame(x)) else x$y
   xmat <- if(is.null(x$x)) model.matrix(x, model = "mean") else x$x$mean
   zmat <- if(is.null(x$x)) model.matrix(x, model = "scale") else x$x$scale
-  offset <- if(is.null(x$offset)) rep(0, NROW(xmat)) else x$offset
+  offset <- if(is.null(x$offset)) 0 else x$offset
   wts <- weights(x)
   if(is.null(wts)) wts <- 1
 
-  ## FIXME
-  rval <- matrix(0, nrow = nrow(xmat), ncol = ncol(xmat) + ncol(zmat))
+  beta <- x$coefficients$mean
+  gamma <- x$coefficients$scale
+  eta <- drop(xmat %*% beta + offset)
+  scale_eta <- x$link$scale$linkfun(1) + drop(zmat %*% gamma)
+  scale <- x$link$scale$linkinv(scale_eta)
+  mu <- x$link$mean$linkinv(eta / scale)
+  resid <- (y - mu) / (mu * (1 - mu))
+  gbeta <- resid * x$link$mean$mu.eta(eta / scale) / scale
+  ggamma <- - resid * x$link$mean$mu.eta(eta / scale) * eta / scale^2 * x$link$scale$mu.eta(scale_eta)
+
+  rval <- cbind(wts * gbeta * xmat, wts * ggamma * zmat)
   rownames(rval) <- names(y)
   colnames(rval) <- colnames(x$vcov)
 
