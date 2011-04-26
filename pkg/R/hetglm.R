@@ -174,15 +174,17 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     beta <- par[1:k]
     gamma <- par[-(1:k)]
     eta <- drop(x %*% beta + offset)
-    pred_scale <- scale_linkinv(scale_linkfun(1) + drop(z %*% gamma))
-    prob <- linkinv(eta / pred_scale)
-    ## FIXME
-    rval <- matrix(0, nrow = n, ncol = k + m)
-    colSums(rval)
+    scale.eta <- scale_linkfun(1) + drop(z %*% gamma)
+    scale <- scale_linkinv(scale.eta)
+    mu <- linkinv(eta / scale)
+    varmu <- variance(mu)
+    gbeta <- mu.eta(eta) * ((eta - offset) + (y - mu))/varmu
+    ggamma <- - gbeta * scale_mu.eta(scale.eta) * eta / scale^2
+    colSums(cbind(gbeta * x, ggamma * z))
   }
 
   ## optimize likelihood  
-  opt <- optim(par = start, fn = loglikfun, ## gr = gradfun,
+  opt <- optim(par = start, fn = loglikfun, gr = gradfun,
     method = method, hessian = hessian, control = ctrl)
   if(opt$convergence > 0) warning("optimization failed to converge")
 
