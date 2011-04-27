@@ -167,13 +167,13 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   gradfun <- function(par) { ## hard-coded for binary response
     beta <- par[1:k]
     gamma <- par[-(1:k)]
-    eta <- drop(x %*% beta + offset)
     scale_eta <- scale_linkfun(1) + drop(z %*% gamma)
     scale <- scale_linkinv(scale_eta)
-    mu <- linkinv(eta / scale)
+    eta <- drop(x %*% beta + offset) / scale
+    mu <- linkinv(eta)
     resid <- (y - mu) / variance(mu)
-    gbeta <- resid * mu.eta(eta / scale) / scale
-    ggamma <- - resid * mu.eta(eta / scale) * eta / scale^2 * scale_mu.eta(scale_eta)
+    gbeta <- resid * mu.eta(eta) / scale
+    ggamma <- - gbeta * eta * scale_mu.eta(scale_eta)
     colSums(cbind(weights * gbeta * x, weights * ggamma * z))
   }
 
@@ -435,13 +435,13 @@ estfun.hetglm <- function(x, ...)
 
   beta <- x$coefficients$mean
   gamma <- x$coefficients$scale
-  eta <- drop(xmat %*% beta + offset)
   scale_eta <- x$link$scale$linkfun(1) + drop(zmat %*% gamma)
   scale <- x$link$scale$linkinv(scale_eta)
-  mu <- x$link$mean$linkinv(eta / scale)
+  eta <- drop(xmat %*% beta + offset) / scale
+  mu <- x$link$mean$linkinv(eta)
   resid <- (y - mu) / x$family$variance(mu)
-  gbeta <- resid * x$link$mean$mu.eta(eta / scale) / scale
-  ggamma <- - resid * x$link$mean$mu.eta(eta / scale) * eta / scale^2 * x$link$scale$mu.eta(scale_eta)
+  gbeta <- resid * x$link$mean$mu.eta(eta) / scale
+  ggamma <- - gbeta * eta * x$link$scale$mu.eta(scale_eta)
 
   rval <- cbind(wts * gbeta * xmat, wts * ggamma * zmat)
   rownames(rval) <- names(y)
