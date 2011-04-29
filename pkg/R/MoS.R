@@ -1,4 +1,4 @@
-iwls <- function(object, maxit = 10) {
+MoS <- function(object, maxit = 10) {
 
   ## extract data
   Y <- object$y ## quick&dirty  
