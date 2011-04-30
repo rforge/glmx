@@ -96,14 +96,19 @@ hetglm <- function(formula, data, subset, na.action, weights, offset,
   return(rval)
 }
 
-hetglm.control <- function(method = "BFGS", maxit = 5000, hessian = TRUE, trace = FALSE, start = NULL, ...)
+hetglm.control <- function(method = "nlminb", maxit = 1000, hessian = FALSE, trace = FALSE, start = NULL, ...)
 {
-  rval <- list(method = method, maxit = maxit, hessian = hessian, trace = trace, start = start)
-  rval <- c(rval, list(...))
-  if(!is.null(rval$fnscale)) warning("fnscale must not be modified")
-  if(!isTRUE(rval$hessian)) warning("hessian must not be modified")
-  rval$fnscale <- -1
-  if(is.null(rval$reltol)) rval$reltol <- .Machine$double.eps^(1/1.2)
+  if(method == "nlminb") {
+    rval <- list(method = method, trace = as.numeric(trace), start = start)
+    rval <- c(rval, list(...))
+    if(is.null(rval$iter.max)) rval$iter.max <- maxit  
+    if(is.null(rval$eval.max)) rval$eval.max <- max(200, rval$iter.max)
+  } else {
+    rval <- list(method = method, maxit = maxit, hessian = hessian, trace = trace, start = start)
+    rval <- c(rval, list(...))
+    if(!is.null(rval$fnscale)) warning("fnscale must not be modified")
+    rval$fnscale <- 1
+  }
   rval
 }
 
@@ -128,6 +133,7 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   scale_linkstr <- link.scale
   variance <- family$variance
   mu.eta <- family$mu.eta
+  dev.resids <- family$dev.resids
   scale_linkobj <- make.link(scale_linkstr)
   scale_linkfun <- scale_linkobj$linkfun
   scale_linkinv <- scale_linkobj$linkinv
@@ -136,8 +142,13 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   ## control parameters
   method <- control$method
   start <- control$start
-  hessian <- control$hessian
-  control <- control[-which(names(control) %in% c("method", "start", "hessian"))]
+  if(method == "nlminb") {
+    hessian <- FALSE
+  } else {
+    hessian <- control$hessian
+    control$hessian <- NULL
+  }
+  control <- control[-which(names(control) %in% c("method", "start"))]
 
   ## null model and starting values
   nullreg <- glm.fit(x = x, y = y, weights = weights, offset = offset, family = family)
@@ -153,37 +164,58 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   loglikfun <- function(par) {
     beta <- par[1:k]
     gamma <- par[-(1:k)]
-    eta <- drop(x %*% beta + offset)
     scale_eta <- scale_linkfun(1) + drop(z %*% gamma)
     scale <- scale_linkinv(scale_eta)
-    prob <- linkinv(eta / scale)
-    ll <- if(NCOL(y) > 1L) {
-      dbinom(y[, 1L], size = rowSums(y), prob = prob, log = TRUE)
-    } else {
-      dbinom(y, size = 1L, prob = prob, log = TRUE)
-    }
-    sum(weights * ll)
+    eta <- drop(x %*% beta + offset) / scale
+    mu <- linkinv(eta)
+    
+    0.5 * sum(dev.resids(y, mu, weights))
   }
-  gradfun <- function(par) { ## hard-coded for binary response
+  gradfun <- function(par) {
     beta <- par[1:k]
     gamma <- par[-(1:k)]
     scale_eta <- scale_linkfun(1) + drop(z %*% gamma)
     scale <- scale_linkinv(scale_eta)
     eta <- drop(x %*% beta + offset) / scale
+    fog <- mu.eta(eta) / scale
     mu <- linkinv(eta)
-    resid <- (y - mu) / variance(mu)
-    gbeta <- resid * mu.eta(eta) / scale
+    varmu <- variance(mu)   
+ 
+    gbeta <- sqrt(weights) * ((y - mu) / varmu) * fog
     ggamma <- - gbeta * eta * scale_mu.eta(scale_eta)
-    colSums(cbind(weights * gbeta * x, weights * ggamma * z))
+    -colSums(cbind(gbeta * x, ggamma * z))    
+  }
+  hessfun <- function(par) {
+    beta <- par[1:k]
+    gamma <- par[-(1:k)]
+    scale_eta <- scale_linkfun(1) + drop(z %*% gamma)
+    scale <- scale_linkinv(scale_eta)
+    eta <- drop(x %*% beta + offset) / scale
+    fog <- mu.eta(eta) / scale
+    mu <- linkinv(eta)
+    varmu <- variance(mu)   
+ 
+    Hbeta <- sqrt(weights) * (1 / sqrt(varmu)) * fog
+    Hgamma <- - Hbeta * eta * scale_mu.eta(scale_eta)
+    crossprod(cbind(Hbeta * x, Hgamma * z))
   }
 
   ## optimize likelihood  
-  opt <- optim(par = start, fn = loglikfun, gr = gradfun,
-    method = method, hessian = hessian, control = control)
-  if(opt$convergence > 0) warning("optimization failed to converge")
+  if(method == "nlminb") {
+    opt <- nlminb(start = start, objective = loglikfun, gradient = gradfun,
+      hessian = hessfun, control = control)  
+    if(opt$convergence > 0) warning(paste("optimization failed to converge with message:",
+      opt$message))
+  } else {
+    opt <- optim(par = start, fn = loglikfun, gr = gradfun,
+      method = method, hessian = hessian, control = control)
+    if(opt$convergence > 0) warning("optimization failed to converge")
+  
+  }
+
 
   ## extract fitted values/parameters
-  vc <- solve(-as.matrix(opt$hessian))
+  vc <- if(hessian) solve(-as.matrix(opt$hessian)) else solve(hessfun(opt$par))
   beta <- as.vector(opt$par[1:k])
   gamma <- as.vector(opt$par[-(1:k)])
   eta <- drop(x %*% beta + offset)
@@ -213,8 +245,8 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     nobs = nobs,
     df.null = nobs - k,
     df.residual = nobs - k - m,
-    loglik = opt$value,
-    loglik.null = -nullreg$deviance/2,
+    loglik = -loglikfun(opt$par),
+    loglik.null = -0.5 * nullreg$deviance,
     vcov = vc,
     family = family,
     link = list(mean = linkobj, scale = scale_linkobj),
@@ -278,7 +310,8 @@ summary.hetglm <- function(object, vcov. = NULL, type = "deviance", ...)
   }
   
   ## number of iterations
-  object$iterations <- as.vector(tail(na.omit(object$optim$count), 1))  
+  iter <- if(object$method == "nlminb") "evaluations" else "counts"
+  object$iterations <- as.vector(na.omit(object$optim[[iter]]["gradient"]))
   
   ## delete some slots
   object$fitted.values <- object$terms <- object$model <- object$y <-

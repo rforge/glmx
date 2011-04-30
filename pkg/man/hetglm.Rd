@@ -181,13 +181,10 @@ data("PSID1976", package = "AER")
 PSID1976$kids <- with(PSID1976, factor((youngkids + oldkids) > 0,
   levels = c(FALSE, TRUE), labels = c("no", "yes")))
 PSID1976$fincome <- PSID1976$fincome/10000
-PSID1976$age <- PSID1976$age/10
-## The scaling of age differs from Greene but leads to numerically
-## much more stable results.
 
 ## Standard probit model via glm()
 lfp0a <- glm(participation ~ age + I(age^2) + fincome + education + kids,
-  data = PSID1976, family = binomial(link = "probit") )
+  data = PSID1976, family = binomial(link = "probit"))
 
 ## Standard probit model via hetglm() with constant scale
 lfp0b <- hetglm(participation ~ age + I(age^2) + fincome + education + kids | 1,

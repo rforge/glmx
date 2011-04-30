@@ -34,7 +34,7 @@ MoS <- function(object, maxit = 10) {
     ## scaled cross products  
     A <- crossprod(cbind(Hbeta * X, Hgamma * Z))
     b <- crossprod(cbind(gbeta * X, ggamma * Z), sqrt(wts) * (Y - mu))
-    step <- solve(A,b)
+    step <- drop(solve(A, b))
     ## should probably have a step halving loop here
     par <- par + step
     dev <- sum(dev.resids(Y,mu,wts))
