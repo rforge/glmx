@@ -185,7 +185,7 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     ggamma <- - gbeta * eta * scale_mu.eta(scale_eta)
     -colSums(cbind(gbeta * x, ggamma * z))    
   }
-  hessfun <- function(par) {
+  hessfun <- function(par, inverse = FALSE) {
     beta <- par[1:k]
     gamma <- par[-(1:k)]
     scale_eta <- scale_linkfun(1) + drop(z %*% gamma)
@@ -197,7 +197,11 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
  
     Hbeta <- sqrt(weights) * (1 / sqrt(varmu)) * fog
     Hgamma <- - Hbeta * eta * scale_mu.eta(scale_eta)
-    crossprod(cbind(Hbeta * x, Hgamma * z))
+    if(!inverse) {
+      crossprod(cbind(Hbeta * x, Hgamma * z))
+    } else {  ## better than: solve(crossprod(...))
+      chol2inv(qr.R(qr(cbind(Hbeta * x, Hgamma * z))))
+    }
   }
 
   ## optimize likelihood  
@@ -215,7 +219,7 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
 
 
   ## extract fitted values/parameters
-  vc <- if(hessian) solve(-as.matrix(opt$hessian)) else solve(hessfun(opt$par))
+  vc <- if(hessian) solve(as.matrix(opt$hessian)) else hessfun(opt$par, inverse = TRUE)
   beta <- as.vector(opt$par[1:k])
   gamma <- as.vector(opt$par[-(1:k)])
   eta <- drop(x %*% beta + offset)
