@@ -1,0 +1,57 @@
+\documentclass[12]{amsart}
+\usepackage{latexsym,amssymb}
+\usepackage{graphics}
+\usepackage{harvard}
+\usepackage{epsfig,subfigure}
+\renewcommand{\theequation}{\thesection.\arabic{equation}}
+
+\begin{document}
+\bibliographystyle{econometrica}
+
+\title{Fragments on GLMX}
+
+\thanks{Version: \today.}  
+
+\author{Roger Koenker}
+\author{Achim Zeileis}
+%\address{University of Illinois at Urbana-Champaign}
+
+\maketitle
+
+\section{Some Simulation Results}
+To explore performance of the estimators described above, we have undertaken a small
+simulation experiment.  Data is generated from the simple latent variable model,
+\[
+Y_i = \beta_0 + x_i \beta_1 + (1 + x_i \gamma ) u_i
+\]
+with design points, $x_i$ iid $U[1,10]$ and $u_i$ iid standard logistic.  Given
+$n$ observations from this model, we compute the four quintiles of the unconditional
+response, $y \in \{ Y_{(in/5)}, \; i = 1, \cdots 4 \}$, and fit the model:
+\begin{verbatim}
+    fit <- hetglm(  ( Y > y )  ~ x, 
+        family = binomial(link= ``logit''), link.scale = ``identity'')
+\end{verbatim}
+Letting $F$ denote the standard logistic distribution function, and using
+its symmetry, we have,
+\begin{eqnarray}
+	P(Y_i > y) &=& 1 - F( ( y - \beta_0 - x_i \beta_1 )/(1 + x_i \gamma))\\
+	&=& F( ( \beta_0 + x_i \beta_1 - y)/(1 + x_i \gamma)),
+\end{eqnarray}
+so our maximum likelihood estimator is intended to estimate the vector
+$(\beta_0 , \beta_1 , \gamma)$.  Since $y$ varies from sample to sample
+and is obviously a quantity known to the investigator, we recenter the
+estimated intercept by adding back $y$, giving an estimator
+$(\hat \beta_0 , \hat \beta_1 , \hat \gamma)$.  We take
+$(\beta_0 , \beta_1 , \gamma) = (0, 3, 0.25)$, and consider sample sizes
+$n \in \{ 500, 1000, 5000 \}$.
+
+In Table \ref{Tab1} we report median bias and  median absolute errors for
+the simulation based on 1000 replications.  It is evident that the performance
+at $n = 500$ is rather poor, but at $n= 5000$ there is considerable improvement.
+Corresponding results for mean bias and root mean squared error appear in
+Table \ref{Tab2}, but should not be viewed by the weak at heart.
+
+\input tab1
+\input tab2
+
+\end{document}
