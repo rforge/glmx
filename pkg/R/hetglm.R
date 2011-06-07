@@ -76,6 +76,7 @@ hetglm <- function(formula, data, subset, na.action, weights, offset,
   ## initialize family (essentially: process response)
   nobs <- n
   y <- Y
+  start <- etastart <- mustart <- NULL
   eval(family$initialize)
   Y <- y  
 
@@ -115,15 +116,19 @@ hetglm.control <- function(method = "nlminb", maxit = 1000, hessian = FALSE, tra
 hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   family = binomial(), link.scale = "log", control = hetglm.control())
 {
-  ## response and regressor matrix
+  ## response
   nobs <- n <- NROW(x)
   if(is.null(weights)) weights <- rep.int(1L, n)
   if(is.null(offset)) offset <- rep.int(0L, n)
-  if(is.null(z)) z <- x
+  start <- etastart <- mustart <- NULL
   eval(family$initialize)
+
+  ## regressors
   n <- NROW(x)
   k <- NCOL(x)
-  m <- NCOL(z)  
+  kstar <- if(family$family %in% c("gaussian", "Gamma", "inverse.gaussian")) k + 1 else k
+  if(is.null(z)) z <- x[, -1, drop = FALSE]
+  m <- NCOL(z)
 
   ## link processing
   linkinv <- family$linkinv
@@ -134,6 +139,7 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   variance <- family$variance
   mu.eta <- family$mu.eta
   dev.resids <- family$dev.resids
+  aic <- family$aic
   scale_linkobj <- make.link(scale_linkstr)
   scale_linkfun <- scale_linkobj$linkfun
   scale_linkinv <- scale_linkobj$linkinv
@@ -169,7 +175,8 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     eta <- drop(x %*% beta + offset) / scale
     mu <- linkinv(eta)
     
-    0.5 * sum(dev.resids(y, mu, weights))
+    dev <- sum(dev.resids(y, mu, weights))
+    (aic(y, n, mu, weights, dev) - kstar) / 2
   }
   gradfun <- function(par) {
     beta <- par[1:k]
@@ -229,10 +236,12 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   nobs <- sum(weights > 0L)
 
   ## names
-  names(beta) <- colnames(x)
-  names(gamma) <- colnames(z)
-  rownames(vc) <- colnames(vc) <- c(colnames(x),
-    if(m > 0L) paste("(scale)", colnames(z), sep = "_") else NULL)
+  if(!is.null(colnames(x)) & !is.null(colnames(z))) {
+    names(beta) <- colnames(x)
+    names(gamma) <- colnames(z)
+    rownames(vc) <- colnames(vc) <- c(colnames(x),
+      if(m > 0L) paste("(scale)", colnames(z), sep = "_") else NULL)
+  }
 
   ## set up return value
   rval <- list(  
