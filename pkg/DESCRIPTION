@@ -4,8 +4,8 @@ Date: 2011-04-30
 Title: Generalized Linear Models Extended
 Author@R: c(person(given = "Achim", family = "Zeileis", role = c("aut", "cre"), email = "Achim.Zeileis@R-project.org"),
             person(given = "Roger", family = "Koenker", role = "aut"),
-            person(given = "Christian", family = "Kleiber", role = "aut"))
-Author: Achim Zeileis [aut, cre], Roger Koenker [aut], Christian Kleiber [aut]
+            person(given = "Philipp", family = "Doebler", role = "aut"))
+Author: Achim Zeileis [aut, cre], Roger Koenker [aut], Philipp Doebler [aut]
 Maintainer: Achim Zeileis <Achim.Zeileis@R-project.org>
 Description: Extended techniques for generalized linear models (GLMs), especially for binary responses,
              including parametric links and heteroskedastic latent variables.
