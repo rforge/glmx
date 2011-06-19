@@ -23,14 +23,32 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL,
   ## FIXME: indicate whether dispersion needs to be estimated or not
 
   ## objective function
-  loglik <- function(par) {
+  profile_loglik <- function(par) {
     aic <- glm.fit(x, y, weights = weights, offset = offset, control = control, family = family(xlink$linkinv(par)))$aic
     (aic - kstar) / 2
   }
 
-  ## optimize likelihood  
-  opt <- optim(par = xstart, fn = loglik, method = "BFGS", hessian = FALSE, control = xcontrol)
-  if(opt$convergence > 0) warning("optimization failed to converge")
+  ## optimize profile likelihood  
+  opt1 <- optim(par = xstart, fn = profile_loglik, method = "BFGS", hessian = FALSE, control = xcontrol)
+  if(opt1$convergence > 0) warning("optimization of profile likelihood failed to converge")
 
-  return(opt)
+  ## extract optimal parameters
+  xpar <- opt1$par
+  cf <- glm.fit(x, y, weights = weights, offset = offset, control = control, family = family(xlink$linkinv(xpar)))$coefficients
+
+  ## objective function and gradient
+  full_loglik <- function(par) {
+    beta <- par[1:k]
+    gamma <- par[-(1:k)]
+    f <- family(xlink$linkinv(gamma))
+    mu <- f$linkinv(drop(x %*% beta + offset))    
+    dev <- sum(f$dev.resids(y, mu, weights))
+    (f$aic(y, n, mu, weights, dev) - kstar) / 2
+  }
+
+  ## optimize full likelihood
+  opt2 <- optim(par = c(cf, xpar), fn = full_loglik, method = "BFGS", hessian = TRUE, control = xcontrol)
+  if(opt2$convergence > 0) warning("optimization of full likelihood failed to converge")
+
+  return(opt2)
 }
