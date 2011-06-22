@@ -4,6 +4,7 @@ s <- (y > yc[4])
 points(x[s],y[s],col = "red")
 f <- hetglm(s ~ x,trace = 10)
 z <- sort(x)
+o <- order(x)
 
 # Coefficients from trace 
 B <- matrix(c(
@@ -22,3 +23,4 @@ F <- matrix(0,length(z),9)
 for(i in 1:9)
     F[,i] <- plogis((cbind(1,z) %*% B[1:2,i])/exp(z*B[3,i]))
 matplot(z,F,type = "l")
+points(z,.6*s[o])

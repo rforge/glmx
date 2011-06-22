@@ -1,0 +1,27 @@
+This is an archive of software for an Rnews article on parametric link functions.
+Note that it requires R2.4.0 or greater because of some delicacies of link
+handling in the glm make.link function.  Note also that the optimization functions
+in pglm.R are rather primative and could be made more robust and conformant with
+standard glm practice.  The current versions are meant only as a proof of concept.
+
+The Rnews figures can be recreated using the Fig[1234].R files.  Note that Fig3.pdf
+takes a few minutes to make since there needs to be a fairly extensive evaluation
+of the likelihood on a 40 by 40 rectangular grid.
+
+Code to recreate the figures:
+
+-rw-r--r--   1 roger  roger    811 Aug 30 07:15 Fig1.R
+-rw-r--r--   1 roger  roger   5525 Aug 30 07:19 Fig1.pdf
+-rw-r--r--   1 roger  roger    563 Aug 30 07:16 Fig2.R
+-rw-r--r--   1 roger  roger  41783 Aug 30 07:19 Fig2.pdf
+-rw-r--r--   1 roger  roger   1188 Aug 30 07:18 Fig3.R
+-rw-r--r--   1 roger  roger  30811 Aug 30 07:32 Fig3.pdf
+-rw-r--r--   1 roger  roger    493 Aug 29 12:28 Fig4.R
+-rw-r--r--   1 roger  roger   8606 Aug 30 07:34 Fig4.pdf
+
+The software:
+
+-rw-r--r--   1 roger  roger   1744 Aug 29 12:28 Plinks.R
+-rw-r--r--   1 roger  roger   2336 Aug 29 12:28 pglm.R
+-rw-r--r--   1 roger  roger    436 Aug 29 12:28 spiral.R
+-rw-r--r--   1 roger  roger    253 Aug 29 12:28 stest.R
