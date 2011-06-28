@@ -73,7 +73,7 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL,
     gnam <- names(formals(family))[1]
     names(gamma) <- if(length(gamma) > 1L) paste(gnam, 1:length(gamma)) else gnam
     if(xlink$name != "identity") names(gamma) <- paste(xlink$name, "(", names(gamma), ")", sep = "")
-    rownames(vc) <- c(names(beta), names(gamma))
+    rownames(vc) <- colnames(vc) <- c(names(beta), names(gamma))
   }
 
   ## set up return value

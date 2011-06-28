@@ -126,9 +126,22 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   ## regressors
   n <- NROW(x)
   k <- NCOL(x)
-  kstar <- if(family$family %in% c("gaussian", "Gamma", "inverse.gaussian")) k + 1 else k
   if(is.null(z)) z <- x[, -1, drop = FALSE]
   m <- NCOL(z)
+
+  ## account for estimated dispersion
+  if(family$family %in% c("gaussian", "Gamma", "inverse.gaussian")) {
+    kstar <- k + 1
+    dispersion <- function(wresiduals, wweights) sum(wresiduals^2, na.rm = TRUE)/sum(wweights, na.rm = TRUE)
+  } else {
+    k
+    dispersion <- function(wresiduals, wweights) 1
+  }
+  ## FIXME: Not clear whether dispersion is handled consistently in
+  ## "glm". In summary.glm() the dispersion is only fixed for "binomial"
+  ## and "poisson". In logLik.glm() an additional parameter is accounted for
+  ## only for "gaussian", "Gamma", "inverse.gaussian".
+  ## Maybe suggest adding disperion = FALSE/TRUE to family objects?
 
   ## link processing
   linkinv <- family$linkinv
@@ -184,11 +197,12 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     scale_eta <- scale_linkfun(1) + drop(z %*% gamma)
     scale <- scale_linkinv(scale_eta)
     eta <- drop(x %*% beta + offset) / scale
-    fog <- mu.eta(eta) / scale
+    fog <- mu.eta(eta) / scale ## aka working weights
     mu <- linkinv(eta)
-    varmu <- variance(mu)   
+    varmu <- variance(mu)
+    phi <- dispersion((y - mu) / varmu, fog)
  
-    gbeta <- sqrt(weights) * ((y - mu) / varmu) * fog
+    gbeta <- sqrt(weights) * ((y - mu) / varmu) * fog/phi
     ggamma <- - gbeta * eta * scale_mu.eta(scale_eta)
     -colSums(cbind(gbeta * x, ggamma * z))    
   }
