@@ -26,8 +26,7 @@
 
 \usage{
 hetglm(formula, data, subset, na.action, weights, offset,
-  family = binomial,
-  link = c("probit", "logit", "cloglog", "cauchit", "log"),
+  family = binomial(link = "probit"),
   link.scale = c("log", "sqrt", "identity"),
   control = hetglm.control(\dots),
   model = TRUE, y = TRUE, x = FALSE, \dots)
@@ -44,10 +43,7 @@ hetglm.fit(x, y, z = NULL, weights = NULL, offset = NULL,
   \item{weights}{optional numeric vector of case weights.}
   \item{offset}{optional numeric vector with an a priori known component to be
     included in the linear predictor.}
-  \item{family}{family object, currently only \code{\link[stats]{binomial}} is
-    supported.}
-  \item{link}{character specification of the link function in
-    the binary response model.}
+  \item{family}{family object (including the link function of the mean model).}
   \item{link.scale}{character specification of the link function in
     the latent scale model.}
   \item{control}{a list of control arguments specified via

@@ -1,6 +1,5 @@
 hetglm <- function(formula, data, subset, na.action, weights, offset,
-                   family = binomial,
-                   link = c("probit", "logit", "cloglog", "cauchit", "log"),
+                   family = binomial(link = "probit"),
                    link.scale = c("log", "sqrt", "identity"),
  		   control = hetglm.control(...),
 		   model = TRUE, y = TRUE, x = FALSE, ...)
@@ -15,15 +14,12 @@ hetglm <- function(formula, data, subset, na.action, weights, offset,
   keep_y <- y
   keep_x <- x
   
-  ## links
-  if(is.character(link)) link <- match.arg(link)
+  ## scale link
   if(is.character(link.scale)) link.scale <- match.arg(link.scale)
-  link.mean <- link
 
   ## family
   if(is.character(family)) family <- get(family, mode = "function", envir = parent.frame())
-  if(is.function(family)) family <- family(link.mean)
-  if(!identical(family$family, "binomial")) stop("currently only 'binomial' family supported")  
+  if(is.function(family)) family <- family()
 
   ## formula
   oformula <- as.formula(formula)
@@ -130,12 +126,13 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   m <- NCOL(z)
 
   ## account for estimated dispersion
-  if(family$family %in% c("gaussian", "Gamma", "inverse.gaussian")) {
-    kstar <- k + 1
+  if(is.null(family$dispersion)) family$dispersion <- family$family %in% c("gaussian", "Gamma", "inverse.gaussian")
+  if(family$dispersion) {
     dispersion <- function(wresiduals, wweights) sum(wresiduals^2, na.rm = TRUE)/sum(wweights, na.rm = TRUE)
+    dpar <- 1
   } else {
-    k
     dispersion <- function(wresiduals, wweights) 1
+    dpar <- 0
   }
   ## FIXME: Not clear whether dispersion is handled consistently in
   ## "glm". In summary.glm() the dispersion is only fixed for "binomial"
@@ -169,7 +166,7 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   }
   control <- control[-which(names(control) %in% c("method", "start"))]
 
-  ## null model and starting values
+  ## null model and default starting values
   nullreg <- glm.fit(x = x, y = y, weights = weights, offset = offset, family = family)
   if(is.null(start)) {
     start <- list(
@@ -189,7 +186,7 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     mu <- linkinv(eta)
     
     dev <- sum(dev.resids(y, mu, weights))
-    (aic(y, n, mu, weights, dev) - kstar) / 2
+    aic(y, n, mu, weights, dev)/2 - dpar
   }
   gradfun <- function(par) {
     beta <- par[1:k]
@@ -202,9 +199,9 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     varmu <- variance(mu)
     phi <- dispersion((y - mu) / varmu, fog)
  
-    gbeta <- sqrt(weights) * ((y - mu) / varmu) * fog/phi
+    gbeta <- sqrt(weights) * ((y - mu) / varmu) * fog
     ggamma <- - gbeta * eta * scale_mu.eta(scale_eta)
-    -colSums(cbind(gbeta * x, ggamma * z))    
+    -colSums(cbind(gbeta * x, ggamma * z)/phi)
   }
   hessfun <- function(par, inverse = FALSE) {
     beta <- par[1:k]
@@ -215,13 +212,14 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     fog <- mu.eta(eta) / scale
     mu <- linkinv(eta)
     varmu <- variance(mu)   
+    phi <- dispersion((y - mu) / varmu, fog)
  
     Hbeta <- sqrt(weights) * (1 / sqrt(varmu)) * fog
     Hgamma <- - Hbeta * eta * scale_mu.eta(scale_eta)
     if(!inverse) {
-      crossprod(cbind(Hbeta * x, Hgamma * z))
+      crossprod(cbind(Hbeta * x, Hgamma * z))/phi
     } else {  ## better than: solve(crossprod(...))
-      chol2inv(qr.R(qr(cbind(Hbeta * x, Hgamma * z))))
+      chol2inv(qr.R(qr(cbind(Hbeta * x, Hgamma * z)))) * phi
     }
   }
 
@@ -246,13 +244,15 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   eta <- drop(x %*% beta + offset)
   scale_eta <- scale_linkfun(1) + drop(z %*% gamma)
   scale <- scale_linkinv(scale_eta)
-  prob <- linkinv(eta / scale)
-  nobs <- sum(weights > 0L)
+  mu <- linkinv(eta / scale)
+  phi <- dispersion((y - mu) / variance(mu), mu.eta(eta) / scale)
+  nobs <- sum(weights > 0L)  
+
 
   ## names
-  if(!is.null(colnames(x)) & !is.null(colnames(z))) {
+  if(!is.null(colnames(x))) {
     names(beta) <- colnames(x)
-    names(gamma) <- colnames(z)
+    if(!is.null(colnames(z))) names(gamma) <- colnames(z)
     rownames(vc) <- colnames(vc) <- c(colnames(x),
       if(m > 0L) paste("(scale)", colnames(z), sep = "_") else NULL)
   }
@@ -260,8 +260,8 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   ## set up return value
   rval <- list(  
     coefficients = list(mean = beta, scale = gamma),
-    residuals = y - prob,
-    fitted.values = structure(prob, .Names = names(y)),
+    residuals = y - mu,
+    fitted.values = structure(mu, .Names = names(y)),
     optim = opt,
     method = method,
     control = control,
@@ -273,7 +273,8 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     df.null = nobs - k,
     df.residual = nobs - k - m,
     loglik = -loglikfun(opt$par),
-    loglik.null = -0.5 * nullreg$deviance,
+    loglik.null = -loglikfun(c(nullreg$coefficients, rep.int(0, m))),
+    dispersion = phi,
     vcov = vc,
     family = family,
     link = list(mean = linkobj, scale = scale_linkobj),
@@ -379,6 +380,7 @@ print.summary.hetglm <- function(x, digits = max(3, getOption("digits") - 3), ..
       "on", sum(sapply(x$coefficients, NROW)), "Df")
     if(!is.na(x$lrtest[1])) cat("\nLR test for homoskedasticity:",
       formatC(x$lrtest[1], digits = digits), "on", x$lrtest[2], "Df, p-value:", format.pval(x$lrtest[3], digits = digits))
+    cat("\nDispersion:", formatC(x$dispersion, digits = digits))
     cat(paste("\nNumber of iterations in", x$method, "optimization:", x$iterations, "\n"))
   }
   
@@ -493,17 +495,26 @@ estfun.hetglm <- function(x, ...)
   wts <- weights(x)
   if(is.null(wts)) wts <- 1
 
+  if(x$family$dispersion) {
+    dispersion <- function(wresiduals, wweights) sum(wresiduals^2, na.rm = TRUE)/sum(wweights, na.rm = TRUE)
+  } else {
+    dispersion <- function(wresiduals, wweights) 1
+  }
+
   beta <- x$coefficients$mean
   gamma <- x$coefficients$scale
   scale_eta <- x$link$scale$linkfun(1) + drop(zmat %*% gamma)
   scale <- x$link$scale$linkinv(scale_eta)
   eta <- drop(xmat %*% beta + offset) / scale
   mu <- x$link$mean$linkinv(eta)
+  wt <- x$link$mean$mu.eta(eta) / scale
   resid <- (y - mu) / x$family$variance(mu)
+  phi <- dispersion(resid, wt)
+
   gbeta <- resid * x$link$mean$mu.eta(eta) / scale
   ggamma <- - gbeta * eta * x$link$scale$mu.eta(scale_eta)
 
-  rval <- cbind(wts * gbeta * xmat, wts * ggamma * zmat)
+  rval <- cbind(wts * gbeta * xmat/phi, wts * ggamma * zmat/phi)
   rownames(rval) <- names(y)
   colnames(rval) <- colnames(x$vcov)
 
@@ -515,7 +526,7 @@ coeftest.hetglm <- function(x, vcov. = NULL, df = Inf, ...)
   coeftest.default(x, vcov. = vcov., df = df, ...)  
 
 logLik.hetglm <- function(object, ...) {
-  structure(object$loglik, df = sum(sapply(object$coefficients, length)), class = "logLik")
+  structure(object$loglik, df = sum(sapply(object$coefficients, length)) + object$family$dispersion, class = "logLik")
 }
 
 terms.hetglm <- function(x, model = c("mean", "scale"), ...) {
