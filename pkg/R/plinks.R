@@ -87,8 +87,6 @@ ao1 <- function(phi, verbose = FALSE)
 ao2 <- function(phi, verbose = FALSE)
 {
   ## parameter processing
-  if(verbose && phi < 0) warning("sign of phi ignored as ao1(phi) = ao1(-phi)")
-  phi <- abs(phi)
   if(phi == 1) {
     rval <- make.link("logit")
     rval$name <- "ao2"
