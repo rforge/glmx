@@ -1,9 +1,11 @@
 \name{WECO}
 \alias{WECO}
-\title{Quit Behavior of Western Electric Workers}
+\title{Productivity and Quit Behavior of Western Electric Workers}
 
 \description{
 Partially artificial data about quit behavior of Western Electric workers.
+(Western Electric was the manufacturing arm of the AT&T corporation during
+its glory days as a monopolist in the U.S. telephone industry.)
 }
 
 \usage{data("WECO")}
@@ -11,7 +13,7 @@ Partially artificial data about quit behavior of Western Electric workers.
 \format{
 A data frame containing 683 observations on 7 variables.
 \describe{
-  \item{output}{output in first six months.}
+  \item{output}{productivity in first six months.}
   \item{sex}{factor indicating gender.}
   \item{dex}{score on a preemployment dexterity exam.}
   \item{lex}{years of education.}
