@@ -1,4 +1,4 @@
-glmx.fit <- function(x, y, weights = NULL, offset = NULL,
+glmx.fit <- function(x, y, weights = NULL, offset = NULL, start = NULL,
   family = negative.binomial, xlink = "log", xstart = 0,
   profile = TRUE, nuisance = FALSE,           ## FIXME: optionally: extra pars as nuisance pars
   control = glm.control(), xcontrol = list())
@@ -16,6 +16,10 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL,
   start <- etastart <- mustart <- NULL
   eval(family_start$initialize)
 
+  ## update starting values for coefficients
+  start <- glm.fit(x, y, weights = weights, offset = offset,
+      start = NULL, control = control, family = family_start)$coefficients
+
   ## regressors and parameters
   nobs <- sum(weights > 0L)
   k <- NCOL(x)
@@ -25,7 +29,8 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL,
 
   ## objective function
   profile_loglik <- function(par) {
-    aic <- glm.fit(x, y, weights = weights, offset = offset, control = control, family = family(xlink$linkinv(par)))$aic
+    aic <- glm.fit(x, y, weights = weights, offset = offset,
+      start = start, control = control, family = family(xlink$linkinv(par)))$aic
     (aic - kstar) / 2
   }
 
@@ -47,12 +52,14 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL,
     xpar <- opt1$par
 
     ## optimal coefficients at chosen extra parameters
-    cf <- glm.fit(x, y, weights = weights, offset = offset, control = control, family = family(xlink$linkinv(xpar)))$coefficients
+    cf <- glm.fit(x, y, weights = weights, offset = offset,
+      start = start, control = control, family = family(xlink$linkinv(xpar)))$coefficients
   } else {
     ## use starting values of extra parameters
     opt1 <- NULL
     xpar <- xstart
-    cf <- glm.fit(x, y, weights = weights, offset = offset, control = control, family = family(xlink$linkinv(xpar)))$coefficients
+    cf <- glm.fit(x, y, weights = weights, offset = offset,
+      start = start, control = control, family = family(xlink$linkinv(xpar)))$coefficients
   }
   
   ## optimize full likelihood
@@ -71,7 +78,7 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL,
   if(!is.null(colnames(x))) {
     names(beta) <- colnames(x)
     gnam <- names(formals(family))[1]
-    names(gamma) <- if(length(gamma) > 1L) paste(gnam, 1:length(gamma)) else gnam
+    names(gamma) <- if(length(gamma) > 1L) paste(gnam, 1:length(gamma), sep = "") else gnam
     if(xlink$name != "identity") names(gamma) <- paste(xlink$name, "(", names(gamma), ")", sep = "")
     rownames(vc) <- colnames(vc) <- c(names(beta), names(gamma))
   }
