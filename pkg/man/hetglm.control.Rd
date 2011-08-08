@@ -8,8 +8,8 @@
 }
 
 \usage{
-hetglm.control(method = "BFGS", maxit = 5000,
-  hessian = TRUE, trace = FALSE, start = NULL, \dots)
+hetglm.control(method = "nlminb", maxit = 1000,
+  hessian = FALSE, trace = FALSE, start = NULL, \dots)
 }
 
 \arguments{

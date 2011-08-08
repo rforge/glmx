@@ -74,7 +74,7 @@ Online supplements to Altman and McDonald (2003).
 
 \references{
 Altman M, McDonald MP (2003). \dQuote{Replication with Attention to Numerical Accuracy.}
-\emph{Political Analysis}, \bold{11}, 302­-307.
+\emph{Political Analysis}, \bold{11}, 302--307.
 
 Alvarez RM, Brehm J (1995). \dQuote{American Ambivalence towards Abortion Policy: Development
 of a Heteroskedastic Probit Model of Competing Values.} \emph{American Journal of Political
