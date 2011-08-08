@@ -24,14 +24,22 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL, start = NULL,
   nobs <- sum(weights > 0L)
   k <- NCOL(x)
   q <- length(xstart)
-  kstar <- if(family_start$family %in% c("gaussian", "Gamma", "inverse.gaussian")) k + q + 1L else k + q ## FIXME?
-  ## FIXME: indicate whether dispersion needs to be estimated or not
+
+  if(is.null(family_start$dispersion)) family_start$dispersion <- family_start$family %in% c("gaussian", "Gamma", "inverse.gaussian")
+  if(family_start$dispersion) {
+    dispersion <- function(wresiduals, wweights) sum(wresiduals^2, na.rm = TRUE)/sum(wweights, na.rm = TRUE)
+    dpar <- 1
+  } else {
+    dispersion <- function(wresiduals, wweights) 1
+    dpar <- 0
+  }
+  df <- k + q + dpar
 
   ## objective function
   profile_loglik <- function(par) {
     aic <- glm.fit(x, y, weights = weights, offset = offset,
       start = start, control = control, family = family(xlink$linkinv(par)))$aic
-    (aic - kstar) / 2
+    aic/2 - dpar
   }
 
   full_loglik <- function(par) {
@@ -40,7 +48,7 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL, start = NULL,
     f <- family(xlink$linkinv(gamma))
     mu <- f$linkinv(drop(x %*% beta + offset))    
     dev <- sum(f$dev.resids(y, mu, weights))
-    (f$aic(y, n, mu, weights, dev) - kstar) / 2
+    f$aic(y, n, mu, weights, dev)/2 - dpar
   }
 
   if(profile) {
@@ -91,7 +99,7 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL, start = NULL,
     optim = list(profile = opt1, full = opt2),
     n = n,
     nobs = nobs,
-    df = kstar,
+    df = df,
     loglik = -opt2$value,
     vcov = vc,
     family = family,
