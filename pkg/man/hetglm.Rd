@@ -41,8 +41,8 @@ hetglm.fit(x, y, z = NULL, weights = NULL, offset = NULL,
   \item{data, subset, na.action}{arguments controlling formula processing
     via \code{\link[stats]{model.frame}}.}
   \item{weights}{optional numeric vector of case weights.}
-  \item{offset}{optional numeric vector with an a priori known component to be
-    included in the linear predictor.}
+  \item{offset}{optional numeric vector(s) with an a priori known component to be
+    included in the linear predictor(s).}
   \item{family}{family object (including the link function of the mean model).}
   \item{link.scale}{character specification of the link function in
     the latent scale model.}
@@ -80,7 +80,7 @@ hetglm.fit(x, y, z = NULL, weights = NULL, offset = NULL,
   \item{control}{the control arguments passed to the \code{optim} call,}
   \item{start}{the starting values for the parameters passed to the \code{optim} call,}
   \item{weights}{the weights used (if any),}
-  \item{offset}{the offset vector used (if any),}
+  \item{offset}{the list of offset vectors used (if any),}
   \item{n}{number of observations,}
   \item{nobs}{number of observations with non-zero weights,}
   \item{df.null}{residual degrees of freedom in the homoskedastic null model,}
