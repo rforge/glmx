@@ -45,7 +45,7 @@ hetglm <- function(formula, data, subset, na.action, weights, offset,
   attr(mtZ, "intercept") <- 1L
   Y <- model.response(mf, "any")
   X <- model.matrix(mtX, mf)
-  Z <- model.matrix(mtZ, mf)[, -1, drop = FALSE]
+  Z <- model.matrix(mtZ, mf)[, -1L, drop = FALSE]
 
   ## process response
   if(length(dim(Y)) == 1L) {
@@ -63,11 +63,20 @@ hetglm <- function(formula, data, subset, na.action, weights, offset,
   weights <- as.vector(weights)
   names(weights) <- rownames(mf)
   
-  ## offset  
-  offset <- model.offset(mf)
-  if(is.null(offset)) offset <- 0L
-  if(length(offset) == 1L) offset <- rep.int(offset, n)
-  offset <- as.vector(offset)
+  ## offsets
+  expand_offset <- function(offset) {
+    if(is.null(offset)) offset <- 0
+    if(length(offset) == 1L) offset <- rep.int(offset, n)
+    as.vector(offset)
+  }
+  ## in mean part of formula
+  offsetX <- expand_offset(model.offset(model.part(formula, data = mf, rhs = 1L, terms = TRUE)))
+  ## in scale part of formula
+  offsetZ <- expand_offset(model.offset(model.part(formula, data = mf, rhs = 2L, terms = TRUE)))
+  ## in offset argument (used for mean)
+  if(!is.null(cl$offset)) offsetX <- offsetX + expand_offset(mf[, "(offset)"])
+  ## collect
+  offset <- list(mean = offsetX, scale = offsetZ)
 
   ## initialize family (essentially: process response)
   nobs <- n
@@ -115,14 +124,14 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   ## response
   nobs <- n <- NROW(x)
   if(is.null(weights)) weights <- rep.int(1L, n)
-  if(is.null(offset)) offset <- rep.int(0L, n)
+  if(is.null(offset)) offset <- list(mean = rep.int(0, n), scale = rep.int(0, n))
   start <- etastart <- mustart <- NULL
   eval(family$initialize)
 
   ## regressors
   n <- NROW(x)
   k <- NCOL(x)
-  if(is.null(z)) z <- x[, -1, drop = FALSE]
+  if(is.null(z)) z <- x[, -1L, drop = FALSE]
   m <- NCOL(z)
 
   ## account for estimated dispersion
@@ -167,7 +176,7 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   control <- control[-which(names(control) %in% c("method", "start"))]
 
   ## null model and default starting values
-  nullreg <- glm.fit(x = x, y = y, weights = weights, offset = offset, family = family)
+  nullreg <- glm.fit(x = x, y = y, weights = weights, offset = offset$mean, family = family)
   if(is.null(start)) {
     start <- list(
       mean = nullreg$coefficients,
@@ -180,9 +189,9 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   loglikfun <- function(par) {
     beta <- par[1:k]
     gamma <- par[-(1:k)]
-    scale_eta <- scale_linkfun(1) + drop(z %*% gamma)
+    scale_eta <- scale_linkfun(1) + drop(z %*% gamma + offset$scale)
     scale <- scale_linkinv(scale_eta)
-    eta <- drop(x %*% beta + offset) / scale
+    eta <- drop(x %*% beta + offset$mean) / scale
     mu <- linkinv(eta)
     
     dev <- sum(dev.resids(y, mu, weights))
@@ -191,9 +200,9 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   gradfun <- function(par) {
     beta <- par[1:k]
     gamma <- par[-(1:k)]
-    scale_eta <- scale_linkfun(1) + drop(z %*% gamma)
+    scale_eta <- scale_linkfun(1) + drop(z %*% gamma + offset$scale)
     scale <- scale_linkinv(scale_eta)
-    eta <- drop(x %*% beta + offset) / scale
+    eta <- drop(x %*% beta + offset$mean) / scale
     fog <- mu.eta(eta) / scale ## aka working weights
     mu <- linkinv(eta)
     varmu <- variance(mu)
@@ -206,9 +215,9 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   hessfun <- function(par, inverse = FALSE) {
     beta <- par[1:k]
     gamma <- par[-(1:k)]
-    scale_eta <- scale_linkfun(1) + drop(z %*% gamma)
+    scale_eta <- scale_linkfun(1) + drop(z %*% gamma + offset$scale)
     scale <- scale_linkinv(scale_eta)
-    eta <- drop(x %*% beta + offset) / scale
+    eta <- drop(x %*% beta + offset$mean) / scale
     fog <- mu.eta(eta) / scale
     mu <- linkinv(eta)
     varmu <- variance(mu)   
@@ -241,8 +250,8 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   vc <- if(hessian) solve(as.matrix(opt$hessian)) else hessfun(opt$par, inverse = TRUE)
   beta <- as.vector(opt$par[1:k])
   gamma <- as.vector(opt$par[-(1:k)])
-  eta <- drop(x %*% beta + offset)
-  scale_eta <- scale_linkfun(1) + drop(z %*% gamma)
+  eta <- drop(x %*% beta + offset$mean)
+  scale_eta <- scale_linkfun(1) + drop(z %*% gamma + offset$scale)
   scale <- scale_linkinv(scale_eta)
   mu <- linkinv(eta / scale)
   phi <- dispersion((y - mu) / variance(mu), mu.eta(eta) / scale)
@@ -267,7 +276,7 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     control = control,
     start = start,
     weights = if(identical(as.vector(weights), rep(1, n))) NULL else weights,
-    offset = if(identical(offset, rep(0, n))) NULL else offset,
+    offset = if(identical(offset, list(mean = rep(0, n), scale = rep(0, n)))) NULL else offset,
     n = n,
     nobs = nobs,
     df.null = nobs - k,
@@ -404,7 +413,8 @@ predict.hetglm <- function(object, newdata = NULL,
       "scale" = {
         gamma <- object$coefficients$scale
         z <- if(is.null(object$x)) model.matrix(object, model = "scale") else object$x$scale
-	object$link$scale$linkinv(object$link$scale$linkfun(1) + drop(z %*% gamma))
+	offsetz <- if(is.null(object$offset)) 0 else offset$scale
+	object$link$scale$linkinv(object$link$scale$linkfun(1) + drop(z %*% gamma + offsetz))
       }
     )
     names(rval) <- names(object$fitted.values)
@@ -412,18 +422,25 @@ predict.hetglm <- function(object, newdata = NULL,
 
   } else {
 
+    ## model frame and matrices
     mf <- model.frame(delete.response(object$terms[["full"]]), newdata, na.action = na.action, xlev = object$levels[["full"]])
     X <- model.matrix(delete.response(object$terms$mean), mf, contrasts = object$contrasts$mean)
-    Z <- model.matrix(object$terms$scale, mf, contrasts = object$contrasts$scale)[, -1, drop = FALSE]
-    offset <- if(!is.null(off.num <- attr(object$terms$full, "offset"))) {
-      eval(attr(object$terms$full, "variables")[[off.num + 1]], newdata)
-    } else {
-      if(!is.null(object$offset)) eval(object$call$offset, newdata)
-    }
-    if(is.null(offset)) offset <- rep(0, NROW(X))
+    Z <- model.matrix(object$terms$scale, mf, contrasts = object$contrasts$scale)[, -1L, drop = FALSE]
 
-    eta_mean <- drop(X %*% object$coefficients$mean + offset)
-    pred_scale <- object$link$scale$linkinv(object$link$scale$linkfun(1) + drop(Z %*% object$coefficients$scale))
+    ## offsets
+    newdata <- newdata[rownames(mf), , drop = FALSE]
+    offset <- list(mean = rep.int(0, nrow(mf)), scale = rep.int(0, nrow(mf)))
+    if(!is.null(object$call$offset)) offset[[1L]] <- offset[[1L]] + eval(object$call$offset, newdata)
+    if(!is.null(off.num <- attr(object$terms$mean, "offset"))) {
+      for(j in off.num) offset[[1L]] <- offset[[1L]] + eval(attr(object$terms$mean, "variables")[[j + 1L]], newdata)
+    }
+    if(!is.null(off.num <- attr(object$terms$scale, "offset"))) {
+      for(j in off.num) offset[[2L]] <- offset[[2L]] + eval(attr(object$terms$scale, "variables")[[j + 1L]], newdata)
+    }
+
+    ## linear predictors
+    eta_mean <- drop(X %*% object$coefficients$mean + offset$mean)
+    pred_scale <- object$link$scale$linkinv(object$link$scale$linkfun(1) + drop(Z %*% object$coefficients$scale + offset$scale))
 
     rval <- switch(type,    
       "response" = {
@@ -491,7 +508,7 @@ estfun.hetglm <- function(x, ...)
   y <- if(is.null(x$y)) model.response(model.frame(x)) else x$y
   xmat <- if(is.null(x$x)) model.matrix(x, model = "mean") else x$x$mean
   zmat <- if(is.null(x$x)) model.matrix(x, model = "scale") else x$x$scale
-  offset <- if(is.null(x$offset)) 0 else x$offset
+  offset <- if(is.null(x$offset)) list(mean = 0, scale = 0) else x$offset
   wts <- weights(x)
   if(is.null(wts)) wts <- 1
 
@@ -503,9 +520,9 @@ estfun.hetglm <- function(x, ...)
 
   beta <- x$coefficients$mean
   gamma <- x$coefficients$scale
-  scale_eta <- x$link$scale$linkfun(1) + drop(zmat %*% gamma)
+  scale_eta <- x$link$scale$linkfun(1) + drop(zmat %*% gamma + offset$scale)
   scale <- x$link$scale$linkinv(scale_eta)
-  eta <- drop(xmat %*% beta + offset) / scale
+  eta <- drop(xmat %*% beta + offset$mean) / scale
   mu <- x$link$mean$linkinv(eta)
   wt <- x$link$mean$mu.eta(eta) / scale
   resid <- (y - mu) / x$family$variance(mu)
@@ -547,7 +564,7 @@ model.matrix.hetglm <- function(object, model = c("mean", "scale"), ...) {
     object$x[[model]]
   } else {
     mm <- model.matrix(object$terms[[model]], model.frame(object), contrasts = object$contrasts[[model]])
-    if(model == "scale") mm[, -1, drop = FALSE] else mm
+    if(model == "scale") mm[, -1L, drop = FALSE] else mm
   }
   return(rval)
 }
