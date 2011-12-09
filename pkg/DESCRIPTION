@@ -1,6 +1,6 @@
 Package: glmx
-Version: 0.0-3
-Date: 2011-08-08
+Version: 0.0-4
+Date: 2011-12-09
 Title: Generalized Linear Models Extended
 Author@R: c(person(given = "Achim", family = "Zeileis", role = c("aut", "cre"), email = "Achim.Zeileis@R-project.org"),
             person(given = "Roger", family = "Koenker", role = "aut"),
