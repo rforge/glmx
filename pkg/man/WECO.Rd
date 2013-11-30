@@ -1,5 +1,6 @@
 \name{WECO}
 \alias{WECO}
+
 \title{Productivity and Quit Behavior of Western Electric Workers}
 
 \description{

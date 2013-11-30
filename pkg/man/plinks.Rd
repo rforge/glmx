@@ -1,5 +1,6 @@
 \name{plinks}
 \alias{plinks}
+
 \alias{talpha}
 \alias{ao1}
 \alias{ao2}
@@ -17,7 +18,8 @@
 
 \title{Parametric Links for Binomial Generalized Linear Models}
 \description{
-  Various symmetric and asymmetric parametric links for use as link function for binomial generalized linear models.
+  Various symmetric and asymmetric parametric links for use as
+  link function for binomial generalized linear models.
 }
 
 \usage{
@@ -26,29 +28,26 @@
   ao1(phi, verbose = FALSE)
   ao2(phi, verbose = FALSE)
   talpha(alpha, verbose = FALSE, splineinv = TRUE,
-    eps = 2*.Machine$double.eps, maxit = 100)
+    eps = 2 * .Machine$double.eps, maxit = 100)
   rocke(shape1, shape2, verbose = FALSE)
 
   gosset(nu, verbose = FALSE)
   pregibon(a, b)
+  nblogit(theta)
 
   angular(verbose = FALSE)
   loglog()
 }
 
 \arguments{
-  \item{phi}{numeric parameter.}
-  \item{alpha}{numeric parameter in \eqn{[0,2]}{[0,2]}.}
-  \item{shape1}{numeric parameter, non-negative.}
-  \item{shape2}{numeric parameter, non-negative.}
+  \item{phi, a, b}{numeric.}
+  \item{alpha}{numeric. Parameter in \eqn{[0,2]}{[0,2]}.}
+  \item{shape1, shape2, nu, theta}{numeric. Non-negative parameter.}
   \item{splineinv}{logical. Should a (quick and dirty) spline function be used
     for computing the inverse link function? Alternatively, a more precise but somewhat
     slower Newton algorithm is used.}
   \item{eps}{numeric. Desired convergence tolerance for Newton algorithm.}
   \item{maxit}{integer. Maximal number of steps for Newton algorithm.}
-  \item{nu}{numeric parameter, non-negative.}
-  \item{a}{numeric parameter.}
-  \item{b}{numeric parameter.}
   \item{verbose}{logical. Should warnings about numerical issues be printed?}
 }
 
@@ -111,86 +110,35 @@
 }
 
 \references{
-  Pregibon D (1980). \dQuote{Goodness of Link Tests for Generalized Linear Models.}
-    \emph{Journal of the Royal Statistical Society C}, \bold{29}, 15--23. 
-  
   Aranda-Ordaz F (1981). \dQuote{On Two Families of Transformations to Additivity for Binary Response Data.}
     \emph{Biometrika}, \bold{68}, 357--363.
+
+  Doebler P (2014) An Asymmetric Logit Transformation. In preparation.
 
   Guerrero V, Johnson R (1982). \dQuote{Use of the Box-Cox Transformation with Binary Response Models.}
     \emph{Biometrika}, \bold{69}, 309--314.
 
-  Rocke DM. (1993). \dQuote{On the Beta Transformation Family.}
-    \emph{Technometrics}, \bold{35}, 73--81.
-  
+  Koenker R (2006). \dQuote{Parametric Links for Binary Response.}
+    \emph{R News}, \bold{6}(4), 32-34.
+
+  Koenker R, Yoon J (2009). \dQuote{Parametric Links for Binary Choice Models: A Fisherian-Bayesian Colloquy.}
+    \emph{Journal of Econometrics}, \bold{152}, 120--130.
+
+  Liu C (2004). \dQuote{Robit Regression: A Simple Robust Alternative to Logistic and Probit Regression.}
+    In Gelman A, Meng X-L (Eds.),
+    \emph{Applied Bayesian Modeling and Causal Inference from Incomplete-Data Perspectives}, Chapter 21,
+    pp. 227--238. John Wiley \& Sons.
+
   Piepho H (2003). The Folded Exponential Transformation for Proportions.
     \emph{Journal of the Royal Statistical Society D}, \bold{52}, 575--589.
   
-  Liu C (2004). \dQuote{Robit Regression: A Simple Robust Alternative to Logistic and Probit Regression.}
-    In Gelman A, Meng X-L (Eds.),
-    \emph{Applied Bayesian Modeling and Casual Inference from Incomplete-Data Perspectives}, Chapter 21, pp. 227--238.
-    John Wiley and Sons.
-
-  Doebler P (2011) An Asymmetric Logit Transformation. In preparation.
+  Pregibon D (1980). \dQuote{Goodness of Link Tests for Generalized Linear Models.}
+    \emph{Journal of the Royal Statistical Society C}, \bold{29}, 15--23. 
+  
+  Rocke DM (1993). \dQuote{On the Beta Transformation Family.}
+    \emph{Technometrics}, \bold{35}, 73--81.
 }
 
-\seealso{\code{\link{family}}}
-
-\examples{
-## negative binomial and nblogit illustration
-if(require("MASS") & require("pscl") & require("lmtest")) {
-
-##########
-## DATA ##
-##########
-
-## artificial data from geometric regression
-set.seed(1)
-n <- 200
-cf <- c(0, 3)
-x <- runif(n, -1, 1)
-y <- rnbinom(n, mu = exp(cf[1] + cf[2] * x), size = 1)
-
-
-###########################
-## COUNT DATA REGRESSION ##
-###########################
-
-## negative binomial regression via MASS:::glm.nb
-m_nb1 <- glm.nb(y ~ x)
-
-## negative binomial regression via glmx
-X <- model.matrix(m_nb1)
-m_nb2 <- glmx.fit(X, y, family = negative.binomial, xlink = "log", xstart = 0)
-
-## comparison
-logLik(m_nb1)
-logLik(m_nb2)
-coeftest(m_nb1)
-coeftest(m_nb2)
-m_nb1$theta
-exp(coef(m_nb2)[3])
-m_nb1$SE.theta
-exp(coef(m_nb2)[3]) * sqrt(diag(vcov(m_nb2)))[3]
-
-
-############################################
-## BINARY REGRESSION WITH PARAMETRIC LINK ##
-############################################
-
-## negative binomial hurdle regression via pscl:::hurdle
-m_hnb1 <- hurdle(y ~ x, dist = "negbin", zero.dist = "negbin")
-
-## negative binomial zero hurdle part via glmx
-## (truncated count part will be available soon)
-nbbin <- function(theta) binomial(link = nblogit(theta))
-m_hnb2 <- glmx.fit(X, y > 0, family = nbbin, xlink = "log", xstart = 0)
-
-## comparison (see only zero hurdle part)
-summary(m_hnb1)
-coeftest(m_hnb2)
-
-}
-}
+\seealso{\code{\link{make.link}}, \code{\link{family}}, \code{\link{glmx}}, \code{\link{WECO}}}
 
 \keyword{regression}
