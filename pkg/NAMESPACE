@@ -9,7 +9,9 @@ export(
   "hetglm.control",
   
   ## optimize GLMs with eXtra parameters
+  "glmx",
   "glmx.fit",
+  "glmx.control",
   
   ## Pregibon distribution
   "dpregibon",
@@ -17,7 +19,7 @@ export(
   "qpregibon",
   "rpregibon",
 
-  ## (parametric) link-glm objects
+  ## (parametric) link-glm generators
   "angular",
   "ao1",
   "ao2",
@@ -51,6 +53,10 @@ S3method("estfun", "hetglm")
 
 ## methods for class glmx
 S3method("coef", "glmx")
+S3method("formula", "glmx")
 S3method("logLik", "glmx")
 S3method("nobs", "glmx")
 S3method("vcov", "glmx")
+S3method("print", "glmx")
+S3method("print", "summary.glmx")
+S3method("summary", "glmx")

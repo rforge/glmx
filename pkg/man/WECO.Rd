@@ -55,29 +55,29 @@ Koenker R, Yoon J (2009). \dQuote{Parametric Links for Binary Choice Models: A F
 ## WECO data
 data("WECO", package = "glmx")
 f <- kwit ~ sex + dex + poly(lex, 2, raw = TRUE)
-x <- model.matrix(f, data = WECO)
-y <- WECO$kwit
 
 ## Gosset model
 gossbin <- function(nu) binomial(link = gosset(nu))
-m1 <- glmx.fit(x, y, family = gossbin, xstart = 0, xlink = "log")
+m1 <- glmx(f, data = WECO,
+  family = gossbin, xstart = 0, xlink = "log")
 
 ## Pregibon model
 pregibin <- function(theta) binomial(link = pregibon(theta[1], theta[2]))
-m2 <- glmx.fit(x, y, family = pregibin, xstart = c(0, 0), xlink = "identity")
+m2 <- glmx(f, data = WECO,
+  family = pregibin, xstart = c(0, 0), xlink = "identity")
 
 ## Probit/logit/cauchit models
 m3 <- lapply(c("probit", "logit", "cauchit"), function(nam)
   glm(f, data = WECO, family = binomial(link = nam)))
 
 ## Probit/cauchit vs. Gosset
-library("lmtest")
-formula.glmx <- function(obj, ...) . ~ .
+if(require("lmtest")) {
 lrtest(m3[[1]], m1)
 lrtest(m3[[3]], m1)
 
 ## Logit vs. Pregibon
 lrtest(m3[[2]], m2)
+}
 
 ## Table 1
 tab1 <- sapply(c(m3, list(m1)), function(obj)

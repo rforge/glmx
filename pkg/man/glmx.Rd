@@ -2,68 +2,114 @@
 \alias{glmx}
 \alias{glmx.fit}
 
-\title{Parametric Links for Binomial Generalized Linear Models}
+\alias{coef.glmx}
+\alias{formula.glmx}
+\alias{logLik.glmx}
+\alias{nobs.glmx}
+\alias{print.glmx}
+\alias{summary.glmx}
+\alias{vcov.glmx}
+
+\title{Generalized Linear Models with Extra Parameters}
 
 \description{
-  Various symmetric and asymmetric parametric links for use as
-  link function for binomial generalized linear models.
+  Estimation of generalized linear models with extra parameters,
+  e.g., parametric links, or families with additional parameters
+  (such as negative binomial).
 }
 
 \usage{
-glmx.fit(x, y, weights = NULL, offset = NULL, start = NULL,
-  family = negative.binomial, xlink = "log", xstart = 0,
-  profile = TRUE, nuisance = FALSE, control = glm.control(), xcontrol = list())
+glmx(formula, data, subset, na.action, weights, offset,
+  family = negative.binomial, xlink = "log", control = glmx.control(...),
+  model = TRUE, y = TRUE, x = FALSE, \dots)
+
+glmx.fit(x, y, weights = NULL, offset = NULL,
+  family = negative.binomial, xlink = "log", control = glmx.control())
 }
 
 \arguments{
+  \item{formula}{symbolic description of the model.}
+  \item{data, subset, na.action}{arguments controlling formula processing
+    via \code{\link[stats]{model.frame}}.}
   \item{weights}{optional numeric vector of case weights.}
   \item{offset}{optional numeric vector(s) with an a priori known component to be
-    included in the linear predictor(s).}
-  \item{family}{family object (including the link function of the mean model).}
-  \item{control}{a list of control arguments.}
-  \item{y, x}{logicals. If \code{TRUE} the corresponding components
+    included in the linear predictor.}
+  \item{family}{function that returns a \code{"family"} object, i.e.,
+    \code{family(x)} needs to be a \code{"family"} object when
+    \code{x} is the numeric vector of extra parameters (by default assumed
+    to be 1-dimensional).}
+  \item{xlink}{link object or a character that can be passed to \code{\link[stats]{make.link}}.
+    It should link the extra parameters to real parameters.}
+  \item{control}{a list of control arguments as returned by \code{\link{glmx.control}}.}
+  \item{model, y, x}{logicals. If \code{TRUE} the corresponding components
     of the fit (model frame, response, model matrix) are returned.
     For \code{glmx.fit}, \code{x} should be a numeric regressor matrix
-    and \code{y} should be the numeric response vector (with values in (0,1)).}
-  \item{start, xlink, xstart, profile, nuisance, xcontrol}{further arguments}
+    and \code{y} should be the response vector.}
+  \item{\dots}{control arguments.}
 }
 
 \details{
-  to do
+  The function \code{glmx} is a convenience interface that estimates generalized
+  linear models (GLMs) with extra parameters. Examples would be binary response models
+  with parametric link functions or count regression using a negative binomial family
+  (which has one additional parameter).
+  
+  Hence, \code{glmx} needs a \code{family} argument which is a family-generating function
+  depending on one numeric argument for the extra parameters. Then, either profile-likelihood
+  methods can be used for optimizing the extra parameters or all parameters can be
+  optimized jointly.
 }
   
 \value{
-  An object of the class \code{glmx}.
+  \code{glmx} returns an object of class \code{"glmx"}, i.e., a list with components as follows.
+  \code{glmx.fit} returns an unclassed list with components up to \code{converged}.
+  \item{coefficients}{a list with elements \code{"glm"} and \code{"extra"}
+    containing the coefficients from the respective models,}
+  \item{residuals}{a vector of deviance residuals,}
+  \item{fitted.values}{a vector of fitted means,}
+  \item{optim}{list of \code{optim} outputs for maximizing the \code{"profile"}
+    and \code{"full"} log-likelihood, respectively,}
+  \item{weights}{the weights used (if any),}
+  \item{offset}{the list of offset vectors used (if any),}
+  \item{n}{number of observations,}
+  \item{nobs}{number of observations with non-zero weights,}
+  \item{df}{number of estimated parameters,}
+  \item{loglik}{log-likelihood of the fitted model,}
+  \item{dispersion}{estimate of the dispersion parameter (if any),}
+  \item{vcov}{covariance matrix of all parameters in the model,}
+  \item{family}{a list with elements \code{"glm"} and \code{"extra"} where the former
+    contains the \code{"family"} object at the optimal extra parameters and
+    the latter the family-generating function,}
+  \item{xlink}{the link object for the extra parameters,}
+  \item{control}{control options used,}
+  \item{converged}{logical indicating successful convergence of \code{optim},}
+  \item{call}{the original function call,}
+  \item{formula}{the formula,}  
+  \item{terms}{the terms object for the model,}
+  \item{levels}{the levels of the categorical regressors,}
+  \item{contrasts}{the contrasts corresponding to \code{levels},}
+  \item{model}{the full model frame (if \code{model = TRUE}),}
+  \item{y}{the response vector (if \code{y = TRUE}),}
+  \item{x}{the model matrix (if \code{x = TRUE}).}
 }
 
-\seealso{\code{\link{hetglm}}}
+\seealso{\code{\link{glmx.control}}, \code{\link{hetglm}}}
 
 \examples{
 ## negative binomial and nblogit illustration
 if(require("MASS") & require("pscl") & require("lmtest")) {
 
-##########
-## DATA ##
-##########
-
 ## artificial data from geometric regression
 set.seed(1)
-n <- 200
-cf <- c(0, 3)
-x <- runif(n, -1, 1)
-y <- rnbinom(n, mu = exp(cf[1] + cf[2] * x), size = 1)
-
-
-###########################
-## COUNT DATA REGRESSION ##
-###########################
+d <- data.frame(x = runif(200, -1, 1))
+d$y <- rnbinom(200, mu = exp(0 + 3 * d$x), size = 1)
 
 ## negative binomial regression via MASS:::glm.nb
-m_nb1 <- glm.nb(y ~ x)
+m_nb1 <- glm.nb(y ~ x, data = d)
 
 ## negative binomial regression via glmx
-X <- model.matrix(m_nb1)
-m_nb2 <- glmx.fit(X, y, family = negative.binomial, xlink = "log", xstart = 0)
+m_nb2 <- glmx(y ~ x, data = d,
+  family = negative.binomial, xlink = "log", xstart = 0)
 
 ## comparison
 logLik(m_nb1)
@@ -71,22 +117,18 @@ logLik(m_nb2)
 coeftest(m_nb1)
 coeftest(m_nb2)
 m_nb1$theta
-exp(coef(m_nb2)[3])
+exp(coef(m_nb2, model = "extra"))
 m_nb1$SE.theta
-exp(coef(m_nb2)[3]) * sqrt(diag(vcov(m_nb2)))[3]
+exp(coef(m_nb2, model = "extra")) * sqrt(vcov(m_nb2, model = "extra"))
 
-
-############################################
-## BINARY REGRESSION WITH PARAMETRIC LINK ##
-############################################
 
 ## negative binomial hurdle regression via pscl:::hurdle
-m_hnb1 <- hurdle(y ~ x, dist = "negbin", zero.dist = "negbin")
+m_hnb1 <- hurdle(y ~ x, data = d, dist = "negbin", zero.dist = "negbin")
 
 ## negative binomial zero hurdle part via glmx
-## (truncated count part will be available soon)
 nbbin <- function(theta) binomial(link = nblogit(theta))
-m_hnb2 <- glmx.fit(X, y > 0, family = nbbin, xlink = "log", xstart = 0)
+m_hnb2 <- glmx(factor(y > 0) ~ x, data = d,
+  family = nbbin, xlink = "log", xstart = 0)
 
 ## comparison (see only zero hurdle part)
 summary(m_hnb1)

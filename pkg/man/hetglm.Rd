@@ -87,6 +87,7 @@ hetglm.fit(x, y, z = NULL, weights = NULL, offset = NULL,
   \item{df.residual}{residual degrees of freedom in the fitted model,}
   \item{loglik}{log-likelihood of the fitted model,}
   \item{loglik.null}{log-likelihood of the homoskedastic null model,}
+  \item{dispersion}{estimate of the dispersion parameter (if any),}
   \item{vcov}{covariance matrix of all parameters in the model,}
   \item{family}{the family object used,}
   \item{link}{a list with elements \code{"mean"} and \code{"scale"}
