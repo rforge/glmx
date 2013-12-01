@@ -55,6 +55,7 @@ Koenker R, Yoon J (2009). \dQuote{Parametric Links for Binary Choice Models: A F
 ## WECO data
 data("WECO", package = "glmx")
 f <- kwit ~ sex + dex + poly(lex, 2, raw = TRUE)
+## (raw = FALSE would be numerically more stable)
 
 ## Gosset model
 gossbin <- function(nu) binomial(link = gosset(nu))

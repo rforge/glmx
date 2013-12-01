@@ -53,17 +53,22 @@ glmx <- function(formula, data, subset, na.action, weights, offset,
 }
 
 glmx.control <- function(profile = TRUE, nuisance = FALSE,
-  start = NULL, xstart = NULL, method = "BFGS", 
-  epsilon = 1e-8, maxit = 1000, trace = FALSE,
+  start = NULL, xstart = NULL, hessian = TRUE,
+  method = "BFGS", epsilon = 1e-8, maxit = 1000, trace = FALSE,
   reltol = .Machine$double.eps^(1/1.2), ...)
 {
+  if(identical(hessian, TRUE)) {
+    hessian <- if(require("numDeriv")) "numDeriv" else "optim"
+  }
+  if(identical(hessian, FALSE)) hessian <- "none"
+  hessian <- match.arg(hessian, c("none", "numDeriv", "optim"))
 
   maxit <- rep(maxit, length.out = 2L)
   trace <- rep(trace, length.out = 2L)
   glmcontrol <- glm.control(epsilon = epsilon, maxit = maxit[2L], trace = trace[2L])
 
   rval <- list(profile = profile, nuisance = nuisance,
-    start = start, xstart = xstart, method = method,
+    start = start, xstart = xstart, hessian = hessian, method = method,
     maxit = maxit[1L], trace = trace[1L], reltol = reltol,
     glm.control = glmcontrol)
   rval <- c(rval, list(...))
@@ -83,7 +88,8 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL,
   xstart <- control$xstart
   glmctrl <- control$glm.control
   method <- control$method
-  xctrl$profile <- xctrl$nuisance <- xctrl$start <- xctrl$xstart <- xctrl$glm.control <- xctrl$method <- NULL
+  hessian <- control$hessian
+  xctrl$profile <- xctrl$nuisance <- xctrl$start <- xctrl$xstart <- xctrl$hessian <- xctrl$glm.control <- xctrl$method <- NULL
   
   ## process link for extra parameters
   if(!inherits(xlink, "link-glm")) xlink <- make.link(xlink)  
@@ -109,8 +115,8 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL,
   eval(family_start$initialize)
 
   ## update starting values for coefficients
-  glmstart <- glm.fit(x, y, weights = weights, offset = offset,
-    start = glmstart, control = glmctrl, family = family_start)$coefficients
+  suppressWarnings(glmstart <- glm.fit(x, y, weights = weights, offset = offset,
+    start = glmstart, control = glmctrl, family = family_start)$coefficients)
 
   ## regressors and parameters
   nobs <- sum(weights > 0L)
@@ -129,8 +135,8 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL,
 
   ## objective function
   profile_loglik <- function(par) {
-    aic <- glm.fit(x, y, weights = weights, offset = offset,
-      start = glmstart, control = glmctrl, family = family(xlink$linkinv(par)))$aic
+    suppressWarnings(aic <- glm.fit(x, y, weights = weights, offset = offset,
+      start = glmstart, control = glmctrl, family = family(xlink$linkinv(par)))$aic)
     aic/2 - dpar - length(glmstart)
   }
 
@@ -183,11 +189,10 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL,
   
   ## optimize full likelihood
   opt2 <- optim(par = c(cf, xpar), fn = full_loglik, gr = full_grad,
-    method = method, hessian = TRUE, control = xctrl)
+    method = method, hessian = hessian == "optim", control = xctrl)
   if(opt2$convergence > 0L) warning("optimization of full likelihood failed to converge")
 
   ## extract fitted values/parameters
-  vc <- solve(as.matrix(opt2$hessian))
   beta <- as.vector(opt2$par[1:k])
   gamma <- as.vector(opt2$par[-(1:k)])
   f <- family(xlink$linkinv(gamma))
@@ -201,9 +206,19 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL,
     names(beta) <- colnames(x)
     names(gamma) <- names(xstart)
     if(xlink$name != "identity") names(gamma) <- paste(xlink$name, "(", names(gamma), ")", sep = "")
-    rownames(vc) <- colnames(vc) <- c(names(beta), names(gamma))
   }
 
+  if(hessian != "none") {
+    vc <- if(hessian == "optim") {
+      as.matrix(opt2$hessian)
+    } else {
+      hessian(full_loglik, c(beta, gamma))
+    }
+    vc <- solve(vc)
+    rownames(vc) <- colnames(vc) <- c(names(beta), names(gamma))
+  } else {
+    vc <- NULL
+  }
 
   ## set up return value
   n <- NROW(x)

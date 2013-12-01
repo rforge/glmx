@@ -84,6 +84,7 @@ pregiboncurve( 0,     0.25, -22,  4)
 pregiboncurve( 0.25, -0.25,  -2.4,9)
 pregiboncurve( 0.25,  0,     -4,  4)
 pregiboncurve( 0.25,  0.25,  -9,  2.4)
+par(mfrow = c(1, 1))
 }
 
 \keyword{distribution}
