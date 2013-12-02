@@ -54,12 +54,10 @@ glmx <- function(formula, data, subset, na.action, weights, offset,
 
 glmx.control <- function(profile = TRUE, nuisance = FALSE,
   start = NULL, xstart = NULL, hessian = TRUE,
-  method = "BFGS", epsilon = 1e-8, maxit = 1000, trace = FALSE,
+  method = "BFGS", epsilon = 1e-8, maxit = c(500, 25), trace = FALSE,
   reltol = .Machine$double.eps^(1/1.2), ...)
 {
-  if(identical(hessian, TRUE)) {
-    hessian <- if(require("numDeriv")) "numDeriv" else "optim"
-  }
+  if(identical(hessian, TRUE)) hessian <- "optim"
   if(identical(hessian, FALSE)) hessian <- "none"
   hessian <- match.arg(hessian, c("none", "numDeriv", "optim"))
 
@@ -135,12 +133,26 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL,
 
   ## objective function
   profile_loglik <- function(par) {
-    suppressWarnings(aic <- glm.fit(x, y, weights = weights, offset = offset,
-      start = glmstart, control = glmctrl, family = family(xlink$linkinv(par)))$aic)
+    suppressWarnings(gm <- glm.fit(x, y, weights = weights, offset = offset,
+      start = glmstart, control = glmctrl, family = family(xlink$linkinv(par))))
+    aic <- gm$aic
     aic/2 - dpar - length(glmstart)
   }
 
-  profile_grad <- NULL
+  profile_grad <- if(is.null(family_start$loglik.extra)) NULL else function(par) {
+    gamma <- par
+    extra <- xlink$linkinv(gamma)
+    f <- family(extra)
+    suppressWarnings(beta <- glm.fit(x, y, weights = weights, offset = offset,
+      start = glmstart, control = glmctrl, family = f)$coefficients)
+    eta <- drop(x %*% beta + offset)
+    fog <- f$mu.eta(eta)
+    mu <- f$linkinv(eta)    
+    varmu <- f$variance(mu)    
+    phi <- dispersion((y - mu) / varmu, fog)
+    ggamma <- matrix(f$loglik.extra(y, mu, extra) * xlink$mu.eta(gamma), nrow = length(mu))
+    -colSums(ggamma/phi)
+  }
 
   full_loglik <- function(par) {
     beta <- par[1:k]
@@ -151,19 +163,18 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL,
     f$aic(y, n, mu, weights, dev)/2 - dpar
   }
 
-  full_grad <- NULL
-
-  gradfun <- function(par) {
+  full_grad <- if(is.null(family_start$loglik.extra)) NULL else function(par) {
     beta <- par[1:k]
     gamma <- par[-(1:k)]
-    f <- family(xlink$linkinv(gamma))
+    extra <- xlink$linkinv(gamma)
+    f <- family(extra)
     eta <- drop(x %*% beta + offset)
     fog <- f$mu.eta(eta)
     mu <- f$linkinv(eta)    
     varmu <- f$variance(mu)    
     phi <- dispersion((y - mu) / varmu, fog)
     gbeta <- sqrt(weights) * ((y - mu) / varmu) * fog
-    ggamma <- rep(0, length(xstart)) # - gbeta * eta * scale_mu.eta(scale_eta)
+    ggamma <- matrix(f$loglik.extra(y, mu, extra) * xlink$mu.eta(gamma), nrow = length(mu))
     -colSums(cbind(gbeta * x, ggamma)/phi)
   }
 
@@ -186,7 +197,7 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL,
     cf <- glm.fit(x, y, weights = weights, offset = offset,
       start = glmstart, control = glmctrl, family = family(xlink$linkinv(xpar)))$coefficients
   }
-  
+
   ## optimize full likelihood
   opt2 <- optim(par = c(cf, xpar), fn = full_loglik, gr = full_grad,
     method = method, hessian = hessian == "optim", control = xctrl)
@@ -209,10 +220,10 @@ glmx.fit <- function(x, y, weights = NULL, offset = NULL,
   }
 
   if(hessian != "none") {
-    vc <- if(hessian == "optim") {
-      as.matrix(opt2$hessian)
-    } else {
+    vc <- if(hessian == "numDeriv" && require("numDeriv")) {
       hessian(full_loglik, c(beta, gamma))
+    } else {
+      as.matrix(opt2$hessian)
     }
     vc <- solve(vc)
     rownames(vc) <- colnames(vc) <- c(names(beta), names(gamma))

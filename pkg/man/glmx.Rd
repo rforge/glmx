@@ -58,6 +58,12 @@ glmx.fit(x, y, weights = NULL, offset = NULL,
   depending on one numeric argument for the extra parameters. Then, either profile-likelihood
   methods can be used for optimizing the extra parameters or all parameters can be
   optimized jointly.
+  
+  If the generated \code{family} contains a list element \code{loglik.extra} for the
+  derivative of the log-likelihood with respect to the extra parameters (i.e., score/gradient
+  contributions), then this is used in the optimization process. This should be a
+  \code{function(y, mu, extra)} depending on the observed response \code{y}, the estimated
+  mean \code{mu}, and the \code{extra} parameters.
 }
   
 \value{
@@ -104,7 +110,7 @@ set.seed(1)
 d <- data.frame(x = runif(200, -1, 1))
 d$y <- rnbinom(200, mu = exp(0 + 3 * d$x), size = 1)
 
-## negative binomial regression via MASS:::glm.nb
+## negative binomial regression via MASS::glm.nb
 m_nb1 <- glm.nb(y ~ x, data = d)
 
 ## negative binomial regression via glmx
@@ -121,8 +127,19 @@ exp(coef(m_nb2, model = "extra"))
 m_nb1$SE.theta
 exp(coef(m_nb2, model = "extra")) * sqrt(vcov(m_nb2, model = "extra"))
 
+## if the score (or gradient) contribution of the extra parameters
+## is supplied, then estimation can be speeded up:
+negbin <- function(theta) {
+  fam <- negative.binomial(theta)
+  fam$loglik.extra <- function(y, mu, theta) digamma(y + theta) - digamma(theta) +
+    log(theta) + 1 - log(mu + theta) - (y + theta)/(mu + theta)
+  fam
+}
+m_nb3 <- glmx(y ~ x, data = d,
+  family = negbin, xlink = "log", xstart = 0, profile = FALSE)
+all.equal(coef(m_nb2), coef(m_nb3))
 
-## negative binomial hurdle regression via pscl:::hurdle
+## negative binomial hurdle regression via pscl::hurdle
 m_hnb1 <- hurdle(y ~ x, data = d, dist = "negbin", zero.dist = "negbin")
 
 ## negative binomial zero hurdle part via glmx

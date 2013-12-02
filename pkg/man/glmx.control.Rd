@@ -10,7 +10,7 @@
 \usage{
 glmx.control(profile = TRUE, nuisance = FALSE,
   start = NULL, xstart = NULL, hessian = TRUE, method = "BFGS", 
-  epsilon = 1e-8, maxit = 1000, trace = FALSE,
+  epsilon = 1e-8, maxit = c(500, 25), trace = FALSE,
   reltol = .Machine$double.eps^(1/1.2), \dots)
 }
 
@@ -24,10 +24,9 @@ glmx.control(profile = TRUE, nuisance = FALSE,
     Must be supplied if there is more than one extra parameter.}
   \item{hessian}{logical or character. Should the hessian be computed
     to estimate the covariance matrix? If character, \code{hessian} can
-    be either \code{"none"}, \code{"optim"} or \code{"numDeriv"}. If the
-    \pkg{numDeriv} package is available, the default is to use its
-    \code{\link[numDeriv]{hessian}} function. Otherwise, \code{\link[stats]{optim}}
-    is used.}
+    be either \code{"none"}, \code{"optim"} or \code{"numDeriv"}. The
+    default is the hessian from \code{\link[stats]{optim}} but alternatively
+    \code{\link[numDeriv]{hessian}} from the \pkg{numDeriv} package can be used.}
   \item{method}{characters string specifying the \code{method} argument
     passed to \code{\link[stats]{optim}}.}
   \item{epsilon}{numeric convergance tolerance passed to \code{\link[stats]{glm.control}}.}

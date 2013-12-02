@@ -63,7 +63,7 @@ m1 <- glmx(f, data = WECO,
   family = gossbin, xstart = 0, xlink = "log")
 
 ## Pregibon model
-pregibin <- function(theta) binomial(link = pregibon(theta[1], theta[2]))
+pregibin <- function(shape) binomial(link = pregibon(shape[1], shape[2]))
 m2 <- glmx(f, data = WECO,
   family = pregibin, xstart = c(0, 0), xlink = "identity")
 

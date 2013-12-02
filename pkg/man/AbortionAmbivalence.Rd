@@ -90,7 +90,8 @@ Unpublished manuscript. \url{http://www.polisci.ohio-state.edu/faculty/lkeele/he
 data("AbortionAmbivalence")
 
 ## first model for mother's health
-ab_health <- hetglm(health ~ ethnicity + gender + religion + religiousness + church + erameans + erasupport |
+ab_health <- hetglm(
+  health ~ ethnicity + gender + religion + religiousness + church + erameans + erasupport |
   pros * cons + importance + information + firmness, data = AbortionAmbivalence)
 summary(ab_health)
 
