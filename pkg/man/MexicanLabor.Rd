@@ -18,7 +18,7 @@ A data frame containing 16 observations on 6 variables.
   \item{locality}{factor with levels \code{"rural"}/\code{"urban"}.}
   \item{age}{factor with levels \code{"<= 24"} and \code{"> 24"} (in years).}
   \item{income}{factor with levels \code{"low"}/\code{"high"}
-    (household income less or more than $2626.8 dollars).}
+    (household income less or more than $2626.8).}
   \item{schooling}{factor with levels \code{"primary"} (primary school or less)
     and \code{"further"} (more than primary school).}
 }

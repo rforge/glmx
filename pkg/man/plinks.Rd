@@ -88,7 +88,7 @@
     x- \frac{1}{2}                 &(\phi = 0)  
     \end{array}\right.}  
   
-  The \eqn{t_\alpha} family (Doebler, 2011) given by
+  The \eqn{t_\alpha} family (Doebler, Holling & Boehning, 2011) given by
   \deqn{y = \alpha\log(x)-(2-\alpha)\log(1-x)}{y = \alpha\log(x)-(2-\alpha)\log(1-x)}
   is asymmetric and contains the logit for \eqn{\phi = 1}{\phi = 1}.
   
@@ -113,13 +113,14 @@
   Aranda-Ordaz F (1981). \dQuote{On Two Families of Transformations to Additivity for Binary Response Data.}
     \emph{Biometrika}, \bold{68}, 357--363.
 
-  Doebler P (2014) An Asymmetric Logit Transformation. In preparation.
+  Doebler P, Holling H, Boehning D (2012). \dQuote{A Mixed Model Approach to Meta-Analysis of Diagnostic Studies with Binary Test Outcome.} 
+    \emph{Psychological Methods}, \bold{17}(3), 418--436.
 
   Guerrero V, Johnson R (1982). \dQuote{Use of the Box-Cox Transformation with Binary Response Models.}
     \emph{Biometrika}, \bold{69}, 309--314.
 
   Koenker R (2006). \dQuote{Parametric Links for Binary Response.}
-    \emph{R News}, \bold{6}(4), 32-34.
+    \emph{R News}, \bold{6}(4), 32--34.
 
   Koenker R, Yoon J (2009). \dQuote{Parametric Links for Binary Choice Models: A Fisherian-Bayesian Colloquy.}
     \emph{Journal of Econometrics}, \bold{152}, 120--130.

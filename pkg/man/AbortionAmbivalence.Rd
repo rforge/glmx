@@ -15,27 +15,27 @@ A data frame containing 1860 observations on 20 variables.
 \describe{
   \item{health}{factor. Answer to the question: Please tell me whether
     or not you think it should be possible for a pregnant woman to obtain
-    a legalabortion if the woman's own health is seriously endangered by
+    a legal abortion if the woman's own health is seriously endangered by
     the pregnancy?}
   \item{rape}{factor. Answer to the question: Please tell me whether
     or not you think it should be possible for a pregnant woman to obtain
-    a legalabortion if she became pregnant as a result of rape?}
+    a legal abortion if she became pregnant as a result of rape?}
   \item{defect}{factor. Answer to the question: Please tell me whether
     or not you think it should be possible for a pregnant woman to obtain
-    a legalabortion if there is a strong chance of serious defect in the baby?}
+    a legal abortion if there is a strong chance of serious defect in the baby?}
   \item{poor}{factor. Answer to the question: Please tell me whether
     or not you think it should be possible for a pregnant woman to obtain
-    a legalabortion if the family has a very low income and cannot afford any
+    a legal abortion if the family has a very low income and cannot afford any
     more children?}
   \item{nomore}{factor. Answer to the question: Please tell me whether
     or not you think it should be possible for a pregnant woman to obtain
-    a legalabortion if she is married and does not want any more children?}
+    a legal abortion if she is married and does not want any more children?}
   \item{single}{factor. Answer to the question: Please tell me whether
     or not you think it should be possible for a pregnant woman to obtain
-    a legalabortion if she is not married and does not want to marry the man?}
+    a legal abortion if she is not married and does not want to marry the man?}
   \item{any}{factor. Answer to the question: Please tell me whether
     or not you think it should be possible for a pregnant woman to obtain
-    a legalabortion if the woman wants it for reason?}
+    a legal abortion if the woman wants it for reason?}
   \item{ethnicity}{factor indicating ethnicity.
     Is the individual African-American (\code{"afam"}) or not (\code{"other"})?}
   \item{gender}{factor indicating gender.}
