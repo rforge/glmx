@@ -1,6 +1,7 @@
 import("stats", "Formula")
 importFrom("lmtest", "coeftest")
 importFrom("sandwich", "bread", "estfun")
+importFrom("MASS", "negative.binomial")
 
 export(
   ## heteroskedastic GLMs

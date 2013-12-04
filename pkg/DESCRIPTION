@@ -8,6 +8,6 @@ Authors@R: c(person(given = "Achim", family = "Zeileis", role = c("aut", "cre"),
 Description: Extended techniques for generalized linear models (GLMs), especially for binary responses,
              including parametric links and heteroskedastic latent variables.
 Depends: R (>= 2.14.0)
-Imports: stats, Formula, lmtest, sandwich
-Suggests: AER, gld, MASS, numDeriv, pscl
+Imports: stats, MASS, Formula, lmtest, sandwich
+Suggests: AER, gld, numDeriv, pscl
 License: GPL-2 | GPL-3
