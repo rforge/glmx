@@ -102,30 +102,34 @@ glmx.fit(x, y, weights = NULL, offset = NULL,
 \seealso{\code{\link{glmx.control}}, \code{\link{hetglm}}}
 
 \examples{
-## negative binomial and nblogit illustration
-if(require("MASS") & require("pscl") & require("lmtest")) {
-
 ## artificial data from geometric regression
 set.seed(1)
 d <- data.frame(x = runif(200, -1, 1))
 d$y <- rnbinom(200, mu = exp(0 + 3 * d$x), size = 1)
 
-## negative binomial regression via MASS::glm.nb
-m_nb1 <- glm.nb(y ~ x, data = d)
+### negative binomial regression ###
 
 ## negative binomial regression via glmx
-m_nb2 <- glmx(y ~ x, data = d,
+if(require("MASS")) {
+m_nb1 <- glmx(y ~ x, data = d,
   family = negative.binomial, xlink = "log", xstart = 0)
+summary(m_nb1)
+
+## negative binomial regression via MASS::glm.nb
+m_nb2 <- glm.nb(y ~ x, data = d)
+summary(m_nb2)
 
 ## comparison
+if(require("lmtest")) {
 logLik(m_nb1)
 logLik(m_nb2)
 coeftest(m_nb1)
 coeftest(m_nb2)
-m_nb1$theta
-exp(coef(m_nb2, model = "extra"))
-m_nb1$SE.theta
-exp(coef(m_nb2, model = "extra")) * sqrt(vcov(m_nb2, model = "extra"))
+exp(coef(m_nb1, model = "extra"))
+m_nb2$theta
+exp(coef(m_nb1, model = "extra")) * sqrt(vcov(m_nb1, model = "extra"))
+m_nb2$SE.theta
+}}
 
 ## if the score (or gradient) contribution of the extra parameters
 ## is supplied, then estimation can be speeded up:
@@ -137,20 +141,22 @@ negbin <- function(theta) {
 }
 m_nb3 <- glmx(y ~ x, data = d,
   family = negbin, xlink = "log", xstart = 0, profile = FALSE)
-all.equal(coef(m_nb2), coef(m_nb3))
+all.equal(coef(m_nb1), coef(m_nb3))
 
-## negative binomial hurdle regression via pscl::hurdle
-m_hnb1 <- hurdle(y ~ x, data = d, dist = "negbin", zero.dist = "negbin")
+
+### censored negative binomial hurdle regression (0 vs. > 0) ###
 
 ## negative binomial zero hurdle part via glmx
 nbbin <- function(theta) binomial(link = nblogit(theta))
-m_hnb2 <- glmx(factor(y > 0) ~ x, data = d,
+m_hnb1 <- glmx(factor(y > 0) ~ x, data = d,
   family = nbbin, xlink = "log", xstart = 0)
-
-## comparison (see only zero hurdle part)
 summary(m_hnb1)
-coeftest(m_hnb2)
 
+## negative binomial hurdle regression via pscl::hurdle
+## (see only zero hurdle part)
+if(require("pscl")) {
+m_hnb2 <- hurdle(y ~ x, data = d, dist = "negbin", zero.dist = "negbin")
+summary(m_hnb2)
 }
 }
 
