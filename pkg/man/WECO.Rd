@@ -52,6 +52,7 @@ Koenker R, Yoon J (2009). \dQuote{Parametric Links for Binary Choice Models: A F
 \seealso{\code{\link{plinks}}}
 
 \examples{
+\donttest{
 ## WECO data
 data("WECO", package = "glmx")
 f <- kwit ~ sex + dex + poly(lex, 2, raw = TRUE)
@@ -94,6 +95,7 @@ plot(fitted(m3[[1]]), fitted(m1),
   xlab = "Estimated Probit Probabilities",
   ylab = "Estimated Gosset Probabilities")
 abline(0, 1)
+}
 }
 
 \keyword{datasets}
