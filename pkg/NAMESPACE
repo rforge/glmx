@@ -1,5 +1,5 @@
 import("stats", "Formula")
-importFrom("lmtest", "coeftest")
+importFrom("lmtest", "coeftest", "coeftest.default")
 importFrom("sandwich", "bread", "estfun")
 importFrom("MASS", "negative.binomial")
 
