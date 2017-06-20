@@ -242,7 +242,6 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     opt <- optim(par = start, fn = loglikfun, gr = gradfun,
       method = method, hessian = hessian, control = control)
     if(opt$convergence > 0) warning("optimization failed to converge")
-  
   }
 
 
