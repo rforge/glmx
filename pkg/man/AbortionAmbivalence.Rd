@@ -81,7 +81,7 @@ of a Heteroskedastic Probit Model of Competing Values.} \emph{American Journal o
 Science}, \bold{39}(4), 1055--1082.
 
 Keele LJ, Park DK (2006). \emph{Ambivalent about Ambivalence: A Re-Examination of Heteroskedastic Probit Models.}
-Unpublished manuscript. \url{http://www.polisci.ohio-state.edu/faculty/lkeele/hetprob.pdf}
+Unpublished manuscript.
 }
 
 \seealso{\code{\link{hetglm}}}
@@ -110,7 +110,7 @@ tab1 <- sapply(names(AbortionAmbivalence)[1:7], function(x) {
   m0 <- hetglm(f0, data = model.frame(m))
   c(Percent_yes = as.vector(100 * prop.table(table(AbortionAmbivalence[[x]]))["yes"]),
     coef(m)[c(1:10, 14, 11:13)],
-    Heteroskedasticity = as.vector(summary(m)$lrtest[1]),
+    Heteroscedasticity = as.vector(summary(m)$lrtest[1]),
     N = nobs(m),
     Goodness_of_fit = 2 * as.vector(logLik(m) - logLik(m0))
   )

@@ -4,7 +4,7 @@ importFrom("sandwich", "bread", "estfun")
 importFrom("MASS", "negative.binomial")
 
 export(
-  ## heteroskedastic GLMs
+  ## heteroscedastic GLMs
   "hetglm",
   "hetglm.fit",
   "hetglm.control",
@@ -58,6 +58,7 @@ S3method("formula", "glmx")
 S3method("logLik", "glmx")
 S3method("nobs", "glmx")
 S3method("vcov", "glmx")
+S3method("predict", "glmx")
 S3method("print", "glmx")
 S3method("print", "summary.glmx")
 S3method("summary", "glmx")

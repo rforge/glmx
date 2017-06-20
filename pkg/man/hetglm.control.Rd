@@ -1,9 +1,9 @@
 \name{hetglm.control}
 \alias{hetglm.control}
 
-\title{Control Parameters for Heteroskedastic Binary Response GLMs}
+\title{Control Parameters for Heteroscedastic Binary Response GLMs}
 \description{
-  Various parameters that control fitting of heteroskedastic binary response models
+  Various parameters that control fitting of heteroscedastic binary response models
   using \code{\link{hetglm}}.
 }
 
@@ -33,7 +33,7 @@ hetglm.control(method = "nlminb", maxit = 1000,
   how \code{optim} is called.
 
   Starting values can be supplied via \code{start} or estimated by
-  \code{\link[stats:glm]{glm.fit}}, using the homoskedastic model.
+  \code{\link[stats:glm]{glm.fit}}, using the homoscedastic model.
   Covariances are derived numerically using the Hessian matrix returned by
   \code{\link[stats]{optim}}.
 }

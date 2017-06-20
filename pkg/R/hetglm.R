@@ -387,7 +387,7 @@ print.summary.hetglm <- function(x, digits = max(3, getOption("digits") - 3), ..
   
     cat("\nLog-likelihood:", formatC(x$loglik, digits = digits),
       "on", sum(sapply(x$coefficients, NROW)), "Df")
-    if(!is.na(x$lrtest[1])) cat("\nLR test for homoskedasticity:",
+    if(!is.na(x$lrtest[1])) cat("\nLR test for homoscedasticity:",
       formatC(x$lrtest[1], digits = digits), "on", x$lrtest[2], "Df, p-value:", format.pval(x$lrtest[3], digits = digits))
     cat("\nDispersion:", if(x$dispersion == 1L) "1" else formatC(x$dispersion, digits = digits))
     cat(paste("\nNumber of iterations in", x$method, "optimization:", x$iterations, "\n"))
