@@ -121,15 +121,16 @@ hetglm.control <- function(method = "nlminb", maxit = 1000, hessian = FALSE, tra
 hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   family = binomial(), link.scale = "log", control = hetglm.control())
 {
-  ## response
+  ## number of observations
   nobs <- n <- NROW(x)
-  if(is.null(weights)) weights <- rep.int(1L, n)
-  if(is.null(offset)) offset <- list(mean = rep.int(0, n), scale = rep.int(0, n))
+
+  ## response
+  if(is.null(weights)) weights <- rep.int(1L, nobs)
+  if(is.null(offset)) offset <- list(mean = rep.int(0, nobs), scale = rep.int(0, nobs))
   start <- etastart <- mustart <- NULL
   eval(family$initialize)
 
   ## regressors
-  n <- NROW(x)
   k <- NCOL(x)
   if(is.null(z)) z <- x[, -1L, drop = FALSE]
   m <- NCOL(z)
@@ -254,7 +255,8 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   scale <- scale_linkinv(scale_eta)
   mu <- linkinv(eta / scale)
   phi <- dispersion((y - mu) / variance(mu), mu.eta(eta) / scale)
-  nobs <- sum(weights > 0L)  
+  nobs <- sum(weights > 0L)
+  n0 <- length(mu)
 
 
   ## names
@@ -274,9 +276,9 @@ hetglm.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     method = method,
     control = control,
     start = start,
-    weights = if(identical(as.vector(weights), rep(1, n))) NULL else weights,
-    offset = if(identical(offset, list(mean = rep(0, n), scale = rep(0, n)))) NULL else offset,
-    n = n,
+    weights = if(identical(as.vector(weights), rep(1, n0))) NULL else weights,
+    offset = if(identical(offset, list(mean = rep(0, n0), scale = rep(0, n0)))) NULL else offset,
+    n = n0,
     nobs = nobs,
     df.null = nobs - k,
     df.residual = nobs - k - m,

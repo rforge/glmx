@@ -1,3 +1,10 @@
+Changes in Version 0.1-2
+
+  o Unified spelling to "heteroscedastic" rather than "heteroskedastic".
+
+  o Added some 'tests' as well as reference output for the examples.
+
+
 Changes in Version 0.1-1
 
   o Added predict() method for "glmx" objects.
